@@ -9,9 +9,6 @@
   },
   "author": "Parvesh",
   "license": "ISC",
-  "devDependencies": {
-    "nodemon": "^2.0.22"
-  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.0.3",
@@ -19,5 +16,8 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.2.1",
     "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
   }
 }
