@@ -1,9 +1,19 @@
+//third party packages
 require("dotenv").config({ path: "./config.env" });
 const mongoose = require("mongoose");
 
+//Setting an event listener for uncaught exception event. Defined before App file so that it catches all the uncaught error.
+process.on('uncaughtException', (err) => {
+  console.log(err.name + ':' + err.message);
+  console.log('UNCAUGHT EXCEPTION! Shutting down the server...');
+  process.exit(1);
+});
+
+//local files
 const app = require("./app");
 
 let server;
+
 //Initializing Database
 const MONGO_DB = process.env.MONGO_DB.replace(
   "<password>",
@@ -22,3 +32,12 @@ mongoose.set("strictQuery", true);
     console.log(err.name + ': ' + err.message);
   }
 })();
+
+//Setting an event listener for unhandled rejection event.
+process.on('unhandledRejection', (err) => {
+  console.log(err.name + ':' + err.message);
+  console.log('UNHANDLED REJECTION! Shutting down the server...');
+  server.close(() => {
+    process.exit(1);
+  });
+});
