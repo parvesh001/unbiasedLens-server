@@ -64,6 +64,12 @@ const authorSchema = new mongoose.Schema(
   }
 );
 
+//Methods
+authorSchema.methods.isComparable = async function(inputPass, hasedPass){
+    return await bcrypt.compare(inputPass,hasedPass)
+}
+
+//Middlewares
 authorSchema.pre('save', async function(next){
     if(!this.isModified('password')) return next()
     try {
