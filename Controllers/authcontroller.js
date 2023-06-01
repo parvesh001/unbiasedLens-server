@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 
 const Author = require("../Models/authorModel");
 const filterObj = require("../Utils/filterObj");
+const AppError = require("../Utils/appError");
 
 function signToken(userId) {
   const jsonWebTokenSecret = process.env.JSON_WEB_TOKEN_SECRET;
@@ -36,13 +37,13 @@ exports.login = async (req, res, next) => {
   //All good, send back token
   const { email, password } = req.body;
   try {
-    if (!email) throw new Error("Email filed is required");
-    if (!password) throw new Error("Password filed is required");
+    if (!email) throw new AppError("Email filed is required", 400);
+    if (!password) throw new AppError("Password filed is required", 400);
     const author = await Author.findOne({ email }).select("+password");
-    if (!author) throw new Error("Wrong email or password");
-    if (author.blocked) throw new Error("Author is bloked");
+    if (!author) throw new AppError("Wrong email or password", 401);
+    if (author.blocked) throw new AppError("Author is bloked", 403);
     if (!(await author.isComparable(password, author.password)))
-      throw new Error("Wrong email or password");
+      throw new AppError("Wrong email or password", 401);
     const token = signToken(author._id);
     const postsCount = author.posts.length;
     const followersCount = author.followers.length;
