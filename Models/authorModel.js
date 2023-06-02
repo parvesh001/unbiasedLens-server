@@ -12,9 +12,9 @@ const authorSchema = new mongoose.Schema(
       type: String,
       trim:true,
       lowercase:true,
-      uniquie:true,
       validate:[validator.isEmail, 'Please provide a valid email!'],
       required: [true, "Author email field is required!"],
+      unique:[true,'Email must be unique!'],
     },
     password: {
       type: String,

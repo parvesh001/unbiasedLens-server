@@ -3,6 +3,9 @@ const express = require("express");
 const cors = require("cors");
 
 //Local files
+const globalErrorHandler = require('./Controllers/globalErrorController')
+
+//Required Routers
 const authorRouter = require("./Routes/authorRoutes");
 
 const app = express();
@@ -13,14 +16,6 @@ app.use(express.json());
 //Routers
 app.use("/api/v1/authors", authorRouter);
 
-app.use((err, req, res, next) => {
-  const statusCode = err.statusCode || 500;
-  const message = err.message || "sth went wrong";
-  const status = err.status || 'error'
-  res.status(statusCode).json({status, message, error: err });
-  next();
-});
-
 //404 handler
 app.all("*", (req, res, next) => {
   res
@@ -30,6 +25,8 @@ app.all("*", (req, res, next) => {
       message: `The route ${req.originalUrl} is not defined`,
     });
 });
+
+app.use(globalErrorHandler);
 
 
 module.exports = app;
