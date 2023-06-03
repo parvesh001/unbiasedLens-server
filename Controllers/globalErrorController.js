@@ -24,10 +24,10 @@ function handleDuplicateKeyErrorDB(err) {
 }
 
 function handleErrorDev(res, err) {
-  res.status(err.statusCode).json({
+  res.status(err.statusCode || 500).json({
     errors: err,
-    status: err.status,
-    message: err.message,
+    status: err.status || 'error',
+    message: err.message || 'something went wrong',
     stack: err.stack,
   });
 }

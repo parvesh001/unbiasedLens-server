@@ -1,9 +1,12 @@
+const crypto = require("crypto");
+
 const jwt = require("jsonwebtoken");
 
 const Author = require("../Models/authorModel");
 const filterObj = require("../Utils/filterObj");
 const AppError = require("../Utils/appError");
 const catchAsync = require("../Utils/catchAsync");
+const sendMail = require("../Utils/sendMail");
 
 function signToken(userId) {
   const jsonWebTokenSecret = process.env.JSON_WEB_TOKEN_SECRET;
@@ -12,6 +15,8 @@ function signToken(userId) {
     expiresIn: jsonWebTokenExpiresIn,
   });
 }
+
+
 
 //Controllers
 exports.register = catchAsync(async (req, res, next) => {
@@ -41,6 +46,84 @@ exports.login = catchAsync(async (req, res, next) => {
   if (author.blocked) return next(new AppError("Author is bloked", 403));
   if (!(await author.isComparable(password, author.password)))
     return next(new AppError("Wrong email or password", 401));
+  const token = signToken(author._id);
+  const postsCount = author.posts.length;
+  const followersCount = author.followers.length;
+  const followingsCount = author.followings.length;
+  res.status(200).json({
+    status: "success",
+    token,
+    data: {
+      author: {
+        name: author.name,
+        email: author.email,
+        photo: author.photo,
+        role: author.role,
+        postsCount,
+        followersCount,
+        followingsCount,
+        active: author.active,
+        blocked: author.blocked,
+        createdAt: author.createdAt,
+      },
+    },
+  });
+});
+
+exports.forgetPassword = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) return next(new AppError("Please provide email!", 400));
+  const author = await Author.findOne({ email });
+  if (!author) return next(new AppError("Author do not exist", 404));
+
+  const forgetPassToken = await author.generateAndSaveForgetPassToken();
+  const url = `${process.env.FRONTEND_DOMAIN_NAME}/api/v1/authors/resetPassword/${forgetPassToken}`;
+  const sender = process.env.ADMIN_EMAIL;
+  const receiver = author.email;
+  const subject = "Request for forgetting password.";
+  const message =
+    "You requested for forgetting your password. Please click bellow to forget your password and reset it.";
+  const htmlContent = `<div><p>${message}</p><a href=${url}>Click here</a></div>`;
+
+  try {
+    await sendMail({ sender, receiver, subject, htmlContent });
+    res.status(200).json({
+      status: "success",
+      message: "Email sent successfully",
+    });
+  } catch (err) {
+    author.forgetPassToken = undefined;
+    author.forgetPassExpiresIn = undefined;
+    await author.save({ validateBeforeSave: false });
+    return next(err);
+  }
+});
+
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  const { password, confirmPassword } = req.body;
+  const { resetPassToken } = req.params;
+ 
+  const forgetPassTokenHashed = crypto
+    .createHash("sha256")
+    .update(resetPassToken)
+    .digest("hex");
+
+  const author = await Author.findOne({
+    forgetPassToken: forgetPassTokenHashed,
+    forgetPassExpiresIn: { $gt: Date.now() },
+  });
+
+
+  if (!author)
+    return next(new AppError("Either token is wrong or expired!", 401));
+
+  author.password = password;
+  author.confirmPassword = confirmPassword;
+  author.forgetPassExpiresIn = undefined;
+  author.forgetPassToken = undefined;
+  author.passwordChangedAt = Date.now() - 1000;
+  await author.save();
+
   const token = signToken(author._id);
   const postsCount = author.posts.length;
   const followersCount = author.followers.length;

@@ -1,3 +1,5 @@
+const crypto = require('crypto')
+
 const mongoose = require("mongoose");
 const bcrypt = require('bcryptjs');
 const validator = require('validator')
@@ -56,8 +58,8 @@ const authorSchema = new mongoose.Schema(
       default: false,
     },
     passwordChangedAt:Date,
-    passwordResetToken:String,
-    passwordResetExpiresIn:Date,
+    forgetPassToken:String,
+    forgetPassExpiresIn:Date,
   },
   {
     timestamps: true,
@@ -67,6 +69,16 @@ const authorSchema = new mongoose.Schema(
 //Methods
 authorSchema.methods.isComparable = async function(inputPass, hasedPass){
     return await bcrypt.compare(inputPass,hasedPass)
+}
+
+authorSchema.methods.generateAndSaveForgetPassToken = async function(){
+  const forgetPassToken = crypto.randomBytes(32).toString('hex');
+  const forgetPassTokenHashed = crypto.createHash('sha256').update(forgetPassToken).digest('hex')
+
+  this.forgetPassToken = forgetPassTokenHashed
+  this.forgetPassExpiresIn = Date.now() + 10 * 60 * 1000
+  await this.save({validateBeforeSave:false})
+  return forgetPassToken
 }
 
 //Middlewares
