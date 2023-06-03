@@ -16,8 +16,6 @@ function signToken(userId) {
   });
 }
 
-
-
 //Controllers
 exports.register = catchAsync(async (req, res, next) => {
   //filter the request body and create author
@@ -102,7 +100,7 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
 exports.resetPassword = catchAsync(async (req, res, next) => {
   const { password, confirmPassword } = req.body;
   const { resetPassToken } = req.params;
- 
+
   const forgetPassTokenHashed = crypto
     .createHash("sha256")
     .update(resetPassToken)
@@ -112,7 +110,6 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
     forgetPassToken: forgetPassTokenHashed,
     forgetPassExpiresIn: { $gt: Date.now() },
   });
-
 
   if (!author)
     return next(new AppError("Either token is wrong or expired!", 401));
@@ -146,4 +143,25 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
       },
     },
   });
+});
+
+exports.protect = catchAsync(async (req, res, next) => {
+  //check if jsontoken exist
+  let token;
+  if (req.headers.authorization) {
+    token = req.get("Authorization").split(" ")[1];
+  }
+  if (!token)
+    return next(new AppError("You are not authorized, please login", 401));
+  //if yes, verify the token and decode it to extract payload
+  const { userId, iat} = jwt.verify(token, process.env.JSON_WEB_TOKEN_SECRET);
+  //if verified, query user with id in payload and check if author is there
+  const author = await Author.findById(userId);
+  if (!author) return next(new AppError("Authot no longer exist", 401));
+  //check if author has changed password after issuing token
+  if (author.passwordChangedAfter(iat))
+    return next(new AppError("Login again, password is changed", 401));
+  //if all good allow to proceed
+  req.author = author;
+  next();
 });

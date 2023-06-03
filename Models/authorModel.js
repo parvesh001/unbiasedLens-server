@@ -81,6 +81,13 @@ authorSchema.methods.generateAndSaveForgetPassToken = async function(){
   return forgetPassToken
 }
 
+authorSchema.methods.passwordChangedAfter = function(tokenIssueTime){
+     if(this.passwordChangedAt){
+       return this.passwordChangedAt.getTime() > tokenIssueTime * 1000
+     }
+     return false;
+}
+
 //Middlewares
 authorSchema.pre('save', async function(next){
     if(!this.isModified('password')) return next()
@@ -91,5 +98,7 @@ authorSchema.pre('save', async function(next){
         console.log(err)
     }
 })
+
+
 
 module.exports = mongoose.model("Author", authorSchema);

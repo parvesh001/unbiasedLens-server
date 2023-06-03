@@ -5,6 +5,7 @@ const {
   login,
   forgetPassword,
   resetPassword,
+  protect
 } = require("../Controllers/authcontroller");
 const { getAuthor } = require("../Controllers/authorController");
 
