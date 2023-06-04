@@ -1,5 +1,6 @@
 const AppError = require("../Utils/appError");
 
+//Mongoose Errors
 function handleCastErrorDB(err) {
   const message = `Invalid ${err.path} value:${err.value}`;
   return new AppError(message, 400);
@@ -23,6 +24,16 @@ function handleDuplicateKeyErrorDB(err) {
   return new AppError(message, 400);
 }
 
+//JSON WEB TOKEN ERRORS
+const handleTokenExpiredError = () => {
+  return new AppError('Token is expired, please login again', 401);
+};
+const handleJsonWebTokenError = ()=>{
+  return new AppError("Invalid token, please login again",401)
+}
+
+
+//ERROR IN DEV MODE VS ERROR IN PROD MODE
 function handleErrorDev(res, err) {
   res.status(err.statusCode || 500).json({
     errors: err,
@@ -31,6 +42,7 @@ function handleErrorDev(res, err) {
     stack: err.stack,
   });
 }
+
 
 function handleErrorProd(res, err) {
   if (err.isOperational) {
@@ -41,6 +53,7 @@ function handleErrorProd(res, err) {
   }
 }
 
+//GLOBAL ERROR HANDLER
 module.exports = (err, req, res, next) => {
   if (process.env.NODE_ENV === "development") {
     handleErrorDev(res, err);
@@ -49,6 +62,8 @@ module.exports = (err, req, res, next) => {
     if (err.name === "CastError") error = handleCastErrorDB(error);
     if (err.name === "ValidationError") error = handleValidationErrorDB(error);
     if (err.code === 11000) error = handleDuplicateKeyErrorDB(error);
+    if (err.name === 'TokenExpiredError') error = handleTokenExpiredError();
+    if (err.name === 'JsonWebTokenError') error = handleJsonWebTokenError();
     handleErrorProd(res, error);
   }
 };
