@@ -21,7 +21,7 @@ router.use(protect);
 
 router.post(
   "/uploadProfile",
-  multer({ dest: "public/img/" ,limits:{files:3} }).single('photo'),
+  multer({ dest: "public/img/" ,limits:{fieldNameSize:1} }).single('photo'),
   uploadProfile
 );
 

@@ -1,4 +1,4 @@
-const multer = require('multer')
+const { MulterError } = require("multer");
 
 const AppError = require("../Utils/appError");
 
@@ -28,26 +28,40 @@ function handleDuplicateKeyErrorDB(err) {
 
 //JSON WEB TOKEN ERRORS
 const handleTokenExpiredError = () => {
-  return new AppError('Token is expired, please login again', 401);
+  return new AppError("Token is expired, please login again", 401);
 };
-const handleJsonWebTokenError = ()=>{
-  return new AppError("Invalid token, please login again",401)
-}
+const handleJsonWebTokenError = () => {
+  return new AppError("Invalid token, please login again", 401);
+};
 
+//MULTER ERRORS
+const handleMulterErrors = (err) => {
+  console.log(err)
+  if (err.code === "LIMIT_UNEXPECTED_FILE") {
+    return new AppError(`The ${err.field} field is not expected`, 400);
+  } else if (err.code === "LIMIT_FILE_SIZE") {
+    return new AppError("File size is too large", 413);
+  } else if (err.code === "LIMIT_FILE_COUNT") {
+    return new AppError("Exceeded the maximum number of files allowed", 400);
+  } else if (err.code === "LIMIT_FIELD_KEY") {
+    return new AppError(
+      "The field name size exceeds the maximum allowed limit",
+      400
+    );
+  }else{
+    return new AppError('Something went wrong while uploading file',500)
+  }
+};
 
 //ERROR IN DEV MODE VS ERROR IN PROD MODE
 function handleErrorDev(res, err) {
-  // if(err instanceof multer.MulterError){
-  //   return res.status(500).json({message:'this is multer error'})
-  // }
   res.status(err.statusCode || 500).json({
     errors: err,
-    status: err.status || 'error',
-    message: err.message || 'something went wrong',
+    status: err.status || "error",
+    message: err.message || "something went wrong",
     stack: err.stack,
   });
 }
-
 
 function handleErrorProd(res, err) {
   if (err.isOperational) {
@@ -67,8 +81,9 @@ module.exports = (err, req, res, next) => {
     if (err.name === "CastError") error = handleCastErrorDB(error);
     if (err.name === "ValidationError") error = handleValidationErrorDB(error);
     if (err.code === 11000) error = handleDuplicateKeyErrorDB(error);
-    if (err.name === 'TokenExpiredError') error = handleTokenExpiredError();
-    if (err.name === 'JsonWebTokenError') error = handleJsonWebTokenError();
+    if (err.name === "TokenExpiredError") error = handleTokenExpiredError();
+    if (err.name === "JsonWebTokenError") error = handleJsonWebTokenError();
+    if (err instanceof MulterError) error = handleMulterErrors(error);
     handleErrorProd(res, error);
   }
 };
