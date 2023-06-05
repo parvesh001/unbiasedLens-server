@@ -25,3 +25,10 @@ exports.getAuthor = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+
+exports.uploadProfile = catchAsync(async(req,res,next)=>{
+  console.log(req.file.buffer)
+  console.log(req.body)
+  res.json({message:'ok'})
+})

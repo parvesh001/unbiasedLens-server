@@ -1,3 +1,5 @@
+const multer = require('multer')
+
 const AppError = require("../Utils/appError");
 
 //Mongoose Errors
@@ -35,6 +37,9 @@ const handleJsonWebTokenError = ()=>{
 
 //ERROR IN DEV MODE VS ERROR IN PROD MODE
 function handleErrorDev(res, err) {
+  // if(err instanceof multer.MulterError){
+  //   return res.status(500).json({message:'this is multer error'})
+  // }
   res.status(err.statusCode || 500).json({
     errors: err,
     status: err.status || 'error',
