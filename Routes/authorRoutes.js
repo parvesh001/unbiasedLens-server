@@ -8,7 +8,12 @@ const {
   resetPassword,
   protect,
 } = require("../Controllers/authcontroller");
-const { getAuthor, uploadProfile } = require("../Controllers/authorController");
+const {
+  getAuthor,
+  uploadProfile,
+  processProfile,
+  setProfile,
+} = require("../Controllers/authorController");
 
 router.post("/register", register);
 router.post("/login", login);
@@ -19,10 +24,6 @@ router.get("/:authorId", getAuthor);
 //From here protected APIs start
 router.use(protect);
 
-router.post(
-  "/uploadProfile",
-  multer({ dest: "public/img/" ,limits:{fieldNameSize:1} }).single('photo'),
-  uploadProfile
-);
+router.post("/uploadProfile", uploadProfile, processProfile, setProfile);
 
 module.exports = router;
