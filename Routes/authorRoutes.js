@@ -13,6 +13,8 @@ const {
   uploadProfile,
   processProfile,
   setProfile,
+  updateProfile,
+  deleteProfile,
 } = require("../Controllers/authorController");
 
 router.post("/register", register);
@@ -25,5 +27,6 @@ router.get("/:authorId", getAuthor);
 router.use(protect);
 
 router.post("/uploadProfile", uploadProfile, processProfile, setProfile);
-
+router.patch("/updateProfile",uploadProfile, processProfile, updateProfile);
+router.delete("/deleteProfile", deleteProfile);
 module.exports = router;

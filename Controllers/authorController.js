@@ -1,9 +1,9 @@
 const multer = require("multer");
-const multerS3 = require("multer-s3");
+const sharp = require("sharp");
 const {
   S3Client,
   PutObjectCommand,
-  DeleteBucketCommand,
+  DeleteObjectCommand,
 } = require("@aws-sdk/client-s3");
 
 const Author = require("../Models/authorModel");
@@ -20,39 +20,105 @@ const s3Client = new S3Client({
 });
 
 //defining storage
-const storage = multerS3({
-  s3: s3Client,
-  bucket: process.env.S3_BUCKET_NAME,
-  // acl: 'public-read', 
-  contentType: multerS3.AUTO_CONTENT_TYPE,
-  key: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const fileName = `user_${req.author._id}_${uniqueSuffix}_${file.originalname}`;
-    cb(null, fileName);
-  },
-})
+const storage = multer.memoryStorage();
 
 //defining filter
-const fileFilter = (req,file,cb)=>{
-   if(file.mimetype.startsWith('image')){
-    cb(null,true)
-   }else{
-    cb(new AppError('file is not an image',400), false)
-   }
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new AppError("file is not an image", 400), false);
+  }
+};
+
+//helper functions
+async function setFileToCloudAndDB(fileName, buffer, mimetype, authorId) {
+  //set image to cloud and db
+  const params = {
+    Bucket: process.env.S3_BUCKET_NAME,
+    Key: fileName,
+    Body: buffer,
+    ContentType: mimetype,
+  };
+  const command = new PutObjectCommand(params);
+  await s3Client.send(command);
+  const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
+  await Author.findByIdAndUpdate(authorId, { photo: imageUrl });
+}
+//delete file from cloud
+async function deleteCloudFile(url) {
+  const parts = url.split('amazonaws.com/');
+  const key = parts[1]
+  const deleteParams = {
+    Bucket: process.env.S3_BUCKET_NAME,
+    Key: key,
+  };
+  const deleteCommand = new DeleteObjectCommand(deleteParams);
+  await s3Client.send(deleteCommand);
 }
 
-exports.uploadProfile = multer({ storage, fileFilter }).single('profilePicture');
+exports.uploadProfile = multer({ storage, fileFilter }).single(
+  "profilePicture"
+);
 
-exports.processProfile = (req,res, next)=>{
-  console.log(req.file)
-  next()
-}
+exports.processProfile = catchAsync(async (req, res, next) => {
+  if (req.url === "/uploadProfile") {
+    const alreadyUploaded = req.author.photo
+      .split("/")
+      .find((part) => part.startsWith("author-"));
+    if (alreadyUploaded)
+      return next(new AppError("You can not upload profile again", 400));
+  }
+
+  if (!req.file)
+    return next(new AppError("Please provide profile picture", 400));
+  const processedBuffer = await sharp(req.file.buffer)
+    .resize({
+      width: 300,
+      height: 300,
+      fit: "contain",
+    })
+    .toBuffer();
+  req.file.processedBuffer = processedBuffer;
+  const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+  const filename = `authors/author-${req.author._id}-${uniqueSuffix}.jpg`;
+  req.file.fileName = filename;
+  next();
+});
 
 exports.setProfile = catchAsync(async (req, res, next) => {
-  // console.log(req)
-  // console.log(req.file.buffer);
-  // console.log(req.body);
-  res.json({ message: "ok" });
+  const { fileName, processedBuffer, mimetype } = req.file;
+  await setFileToCloudAndDB(
+    fileName,
+    processedBuffer,
+    mimetype,
+    req.author._id
+  );
+  res.status(200).json({ status: "success", message: "file uploaded" });
+});
+
+exports.updateProfile = catchAsync(async (req, res, next) => {
+  //First delete exiting one
+  await deleteCloudFile(req.author.photo);
+
+  //Uploading new one
+  const { fileName, processedBuffer, mimetype } = req.file;
+  await setFileToCloudAndDB(
+    fileName,
+    processedBuffer,
+    mimetype,
+    req.author._id
+  );
+  res.status(200).json({ status: "success", message: "profile updated" });
+});
+
+exports.deleteProfile = catchAsync(async (req, res, next) => {
+  await deleteCloudFile(req.author.photo);
+  const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/default.jpg`;
+  await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
+  res
+    .status(200)
+    .json({ status: "success", message: "Profile picture deleted." });
 });
 
 exports.getAuthor = catchAsync(async (req, res, next) => {

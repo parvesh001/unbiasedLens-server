@@ -43,7 +43,7 @@ const authorSchema = new mongoose.Schema(
     },
     photo: {
       type: String,
-      default: "default.jpg",
+      default: `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/default.jpg`,
     },
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Author" }],
     followings: [{ type: mongoose.Schema.Types.ObjectId, ref: "Authors" }],
