@@ -7,6 +7,9 @@ const globalErrorHandler = require('./Controllers/globalErrorController')
 
 //Required Routers
 const authorRouter = require("./Routes/authorRoutes");
+const followRouter = require('./Routes/followRoutes');
+const unfollowRouter = require('./Routes/unfollowRoutes');
+const viewRouter = require('./Routes/viewRoutes');
 
 const app = express();
 
@@ -15,6 +18,9 @@ app.use(express.json());
 
 //Routers
 app.use("/api/v1/authors", authorRouter);
+app.use("/api/v1/follow", followRouter);
+app.use("/api/v1/unfollow", unfollowRouter);
+app.use("/api/v1/view", viewRouter);
 
 //404 handler
 app.all("*", (req, res, next) => {

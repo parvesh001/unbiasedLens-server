@@ -9,6 +9,7 @@ const {
 const Author = require("../Models/authorModel");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
+const filterObj = require("../Utils/filterObj");
 
 //creating client instance
 const s3Client = new S3Client({
@@ -47,8 +48,8 @@ async function setFileToCloudAndDB(fileName, buffer, mimetype, authorId) {
 }
 //delete file from cloud
 async function deleteCloudFile(url) {
-  const parts = url.split('amazonaws.com/');
-  const key = parts[1]
+  const parts = url.split("amazonaws.com/");
+  const key = parts[1];
   const deleteParams = {
     Bucket: process.env.S3_BUCKET_NAME,
     Key: key,
@@ -114,7 +115,7 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
 
 exports.deleteProfile = catchAsync(async (req, res, next) => {
   await deleteCloudFile(req.author.photo);
-  const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/default.jpg`;
+  const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/authors/default.jpg`;
   await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
   res
     .status(200)
@@ -143,4 +144,14 @@ exports.getAuthor = catchAsync(async (req, res, next) => {
       },
     },
   });
+});
+
+exports.updateAuthor = catchAsync(async (req, res, next) => {
+  const filteredObj = filterObj(req.body, "name", "email");
+  const updatedAuthor = await Author.findByIdAndUpdate(
+    req.author._id,
+    filteredObj,
+    { new: true, runValidators: true }
+  );
+  res.status(200).json({ status: 'success', data: { author: updatedAuthor } });
 });

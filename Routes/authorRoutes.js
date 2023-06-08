@@ -15,6 +15,7 @@ const {
   setProfile,
   updateProfile,
   deleteProfile,
+  updateAuthor,
 } = require("../Controllers/authorController");
 
 router.post("/register", register);
@@ -29,4 +30,6 @@ router.use(protect);
 router.post("/uploadProfile", uploadProfile, processProfile, setProfile);
 router.patch("/updateProfile",uploadProfile, processProfile, updateProfile);
 router.delete("/deleteProfile", deleteProfile);
+
+router.patch("/updateMe", updateAuthor);
 module.exports = router;
