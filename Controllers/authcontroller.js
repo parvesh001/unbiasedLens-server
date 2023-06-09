@@ -2,7 +2,6 @@ const crypto = require("crypto");
 
 const jwt = require("jsonwebtoken");
 
-
 const Author = require("../Models/authorModel");
 const filterObj = require("../Utils/filterObj");
 const AppError = require("../Utils/appError");
@@ -40,11 +39,18 @@ exports.login = catchAsync(async (req, res, next) => {
 
   if (!email) return next(new AppError("Email filed is required", 400));
   if (!password) return next(new AppError("Password filed is required", 400));
+
   const author = await Author.findOne({ email }).select("+password");
   if (!author) return next(new AppError("Wrong email or password", 401));
   if (author.blocked) return next(new AppError("Author is bloked", 403));
+
   if (!(await author.isComparable(password, author.password)))
     return next(new AppError("Wrong email or password", 401));
+
+  if(!author.active){
+     author.active = true;
+     await author.save({validateBeforeSave:false})
+  }
   const token = signToken(author._id);
   const postsCount = author.posts.length;
   const followersCount = author.followers.length;
@@ -73,7 +79,8 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
   const { email } = req.body;
   if (!email) return next(new AppError("Please provide email!", 400));
   const author = await Author.findOne({ email });
-  if (!author) return next(new AppError("Author do not exist", 404));
+  if (!author || !author.active) return next(new AppError("Author do not exist", 404));
+  if(author.blocked) return next(new AppError('Author is blocked', 403));
 
   const forgetPassToken = await author.generateAndSaveForgetPassToken();
   const url = `${process.env.FRONTEND_DOMAIN_NAME}/api/v1/authors/resetPassword/${forgetPassToken}`;
@@ -155,10 +162,12 @@ exports.protect = catchAsync(async (req, res, next) => {
   if (!token)
     return next(new AppError("You are not authorized, please login", 401));
   //if yes, verify the token and decode it to extract payload
-  const { userId, iat} = jwt.verify(token, process.env.JSON_WEB_TOKEN_SECRET);
+  const { userId, iat } = jwt.verify(token, process.env.JSON_WEB_TOKEN_SECRET);
   //if verified, query user with id in payload and check if author is there
   const author = await Author.findById(userId);
   if (!author) return next(new AppError("Authot no longer exist", 401));
+  //check if author is blocked
+  if(author.blocked) return next(new AppError('Access denied, you are blocked',403 ))
   //check if author has changed password after issuing token
   if (author.passwordChangedAfter(iat))
     return next(new AppError("Login again, password is changed", 401));
@@ -166,3 +175,11 @@ exports.protect = catchAsync(async (req, res, next) => {
   req.author = author;
   next();
 });
+
+exports.restrict = (req, res, next) => {
+  if (req.author.role !== "admin")
+    return next(
+      new AppError("Access forbidden. Admin privileges required.", 403)
+    );
+  next();
+};

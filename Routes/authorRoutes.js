@@ -1,5 +1,4 @@
 const router = require("express").Router();
-const multer = require("multer");
 
 const {
   register,
@@ -7,6 +6,7 @@ const {
   forgetPassword,
   resetPassword,
   protect,
+  restrict,
 } = require("../Controllers/authcontroller");
 const {
   getAuthor,
@@ -16,20 +16,32 @@ const {
   updateProfile,
   deleteProfile,
   updateAuthor,
+  getFollowers,
+  getFollowings,
+  getMyProfileViewers,
+  getAllAuthors,
 } = require("../Controllers/authorController");
 
 router.post("/register", register);
 router.post("/login", login);
 router.post("/forgetPassword", forgetPassword);
 router.patch("/resetPassword/:resetPassToken", resetPassword);
-router.get("/:authorId", getAuthor);
+router.get("/author/:authorId", getAuthor);
+router.get("/author/:authorId/followers", getFollowers)
+router.get("/author/:authorId/followings", getFollowings)
 
 //From here protected APIs start
 router.use(protect);
 
+router.get("/myProfileViewers", getMyProfileViewers)
 router.post("/uploadProfile", uploadProfile, processProfile, setProfile);
 router.patch("/updateProfile",uploadProfile, processProfile, updateProfile);
 router.delete("/deleteProfile", deleteProfile);
 
 router.patch("/updateMe", updateAuthor);
+
+//Admin specific routes
+router.use(restrict)
+
+router.get('/', getAllAuthors)
 module.exports = router;

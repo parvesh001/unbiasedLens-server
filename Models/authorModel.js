@@ -46,8 +46,8 @@ const authorSchema = new mongoose.Schema(
       default: `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/default.jpg`,
     },
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Author" }],
-    followings: [{ type: mongoose.Schema.Types.ObjectId, ref: "Authors" }],
-    profileViewers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Authors" }],
+    followings: [{ type: mongoose.Schema.Types.ObjectId, ref: "Author" }],
+    profileViewers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Author" }],
     posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     active: {
       type: Boolean,

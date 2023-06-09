@@ -146,6 +146,40 @@ exports.getAuthor = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.getFollowers = catchAsync(async (req, res, next) => {
+  const { authorId } = req.params;
+  const author = await Author.findById(authorId).populate({
+    path: "followers",
+    match: { blocked: false, active:true },
+  });
+  if (!author) return next(new AppError("Author not found", 404));
+  const followers = author.followers.map((follower) => {
+    return {
+      _id: follower._id,
+      name: follower.name,
+      photo: follower.photo,
+    };
+  });
+  res.status(200).json({ status: "success", data: { followers } });
+});
+
+exports.getFollowings = catchAsync(async (req, res, next) => {
+  const { authorId } = req.params;
+  const author = await Author.findById(authorId).populate({
+    path: "followings",
+    match: { blocked: false, active:true },
+  });
+  if (!author) return next(new AppError("Author not found", 404));
+  const followings = author.followings.map((following) => {
+    return {
+      _id: following._id,
+      name: following.name,
+      photo: following.photo,
+    };
+  });
+  res.status(200).json({ status: "success", data: { followings } });
+});
+
 exports.updateAuthor = catchAsync(async (req, res, next) => {
   const filteredObj = filterObj(req.body, "name", "email");
   const updatedAuthor = await Author.findByIdAndUpdate(
@@ -153,5 +187,27 @@ exports.updateAuthor = catchAsync(async (req, res, next) => {
     filteredObj,
     { new: true, runValidators: true }
   );
-  res.status(200).json({ status: 'success', data: { author: updatedAuthor } });
+  res.status(200).json({ status: "success", data: { author: updatedAuthor } });
+});
+
+exports.getMyProfileViewers = catchAsync(async (req, res, next) => {
+  const author = await Author.findById(req.author._id).populate({
+    path: "profileViewers",
+    match: { blocked: false, active:true },
+  });
+
+  const profileViewers = author.profileViewers.map((viewer) => {
+    return {
+      _id: viewer._id,
+      name: viewer.name,
+      photo: viewer.photo,
+    };
+  });
+  res.status(200).json({ status: "success", data: { profileViewers } });
+});
+
+//Admin specific tasks, highly critical and restricted
+exports.getAllAuthors = catchAsync(async (req, res, next) => {
+  const authors = await Author.find();
+  res.status(200).json({ status: "success", data: { authors } });
 });
