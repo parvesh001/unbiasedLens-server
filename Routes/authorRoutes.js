@@ -20,6 +20,8 @@ const {
   getFollowings,
   getMyProfileViewers,
   getAllAuthors,
+  blockAuthor,
+  unblockAuthor,
 } = require("../Controllers/authorController");
 
 router.post("/register", register);
@@ -43,5 +45,7 @@ router.patch("/updateMe", updateAuthor);
 //Admin specific routes
 router.use(restrict)
 
-router.get('/', getAllAuthors)
+router.get('/', getAllAuthors);
+router.patch('/author/:authorId/block', blockAuthor);
+router.patch('/author/:authorId/unblock', unblockAuthor);
 module.exports = router;

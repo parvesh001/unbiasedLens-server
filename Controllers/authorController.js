@@ -22,8 +22,7 @@ const s3Client = new S3Client({
 
 //defining storage
 const storage = multer.memoryStorage();
-
-//defining filter
+//Defining filter
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image")) {
     cb(null, true);
@@ -32,7 +31,9 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-//helper functions
+
+//>>>>>>> HELPER FUNCTIONS >>>>>>>>>>
+
 async function setFileToCloudAndDB(fileName, buffer, mimetype, authorId) {
   //set image to cloud and db
   const params = {
@@ -46,7 +47,7 @@ async function setFileToCloudAndDB(fileName, buffer, mimetype, authorId) {
   const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
   await Author.findByIdAndUpdate(authorId, { photo: imageUrl });
 }
-//delete file from cloud
+
 async function deleteCloudFile(url) {
   const parts = url.split("amazonaws.com/");
   const key = parts[1];
@@ -57,6 +58,39 @@ async function deleteCloudFile(url) {
   const deleteCommand = new DeleteObjectCommand(deleteParams);
   await s3Client.send(deleteCommand);
 }
+
+async function getAuthorExtraData(authorId, populateField) {
+  const author = await Author.findById(authorId).populate({
+    path: populateField,
+    match: { blocked: false, active: true },
+  });
+  if (!author) throw new AppError("Author not found", 404);
+  const data = author[populateField].map((data) => {
+    return {
+      _id: data._id,
+      name: data.name,
+      photo: data.photo,
+    };
+  });
+  return data;
+}
+
+async function blockUnblockAuthor(req) {
+  const { authorId } = req.params;
+  const author = await Author.findById(authorId);
+  if (!author) return next(new AppError("Author not found", 404));
+ 
+  //Block or unblock author
+  if (req.url.split('/').includes('block')) {
+    author.blocked = true;
+  } else {
+    author.blocked = false;
+  }
+  await author.save({ validateBeforeSave: false });
+}
+
+
+//>>>>>>> CONTROLLERS >>>>>>>>>>
 
 exports.uploadProfile = multer({ storage, fileFilter }).single(
   "profilePicture"
@@ -148,35 +182,13 @@ exports.getAuthor = catchAsync(async (req, res, next) => {
 
 exports.getFollowers = catchAsync(async (req, res, next) => {
   const { authorId } = req.params;
-  const author = await Author.findById(authorId).populate({
-    path: "followers",
-    match: { blocked: false, active:true },
-  });
-  if (!author) return next(new AppError("Author not found", 404));
-  const followers = author.followers.map((follower) => {
-    return {
-      _id: follower._id,
-      name: follower.name,
-      photo: follower.photo,
-    };
-  });
+  const followers = await getAuthorExtraData(authorId, "followers");
   res.status(200).json({ status: "success", data: { followers } });
 });
 
 exports.getFollowings = catchAsync(async (req, res, next) => {
   const { authorId } = req.params;
-  const author = await Author.findById(authorId).populate({
-    path: "followings",
-    match: { blocked: false, active:true },
-  });
-  if (!author) return next(new AppError("Author not found", 404));
-  const followings = author.followings.map((following) => {
-    return {
-      _id: following._id,
-      name: following.name,
-      photo: following.photo,
-    };
-  });
+  const followings = await getAuthorExtraData(authorId, "followings");
   res.status(200).json({ status: "success", data: { followings } });
 });
 
@@ -191,18 +203,10 @@ exports.updateAuthor = catchAsync(async (req, res, next) => {
 });
 
 exports.getMyProfileViewers = catchAsync(async (req, res, next) => {
-  const author = await Author.findById(req.author._id).populate({
-    path: "profileViewers",
-    match: { blocked: false, active:true },
-  });
-
-  const profileViewers = author.profileViewers.map((viewer) => {
-    return {
-      _id: viewer._id,
-      name: viewer.name,
-      photo: viewer.photo,
-    };
-  });
+  const profileViewers = await getAuthorExtraData(
+    req.author._id,
+    "profileViewers"
+  );
   res.status(200).json({ status: "success", data: { profileViewers } });
 });
 
@@ -210,4 +214,13 @@ exports.getMyProfileViewers = catchAsync(async (req, res, next) => {
 exports.getAllAuthors = catchAsync(async (req, res, next) => {
   const authors = await Author.find();
   res.status(200).json({ status: "success", data: { authors } });
+});
+
+exports.blockAuthor = catchAsync(async (req, res, next) => {
+  await blockUnblockAuthor(req);
+  res.status(200).json({ status: "success", message: "Author blocked" });
+});
+exports.unblockAuthor = catchAsync(async (req, res, next) => {
+  await blockUnblockAuthor(req);
+  res.status(200).json({ status: "success", message: "Author unblocked" });
 });

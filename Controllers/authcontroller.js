@@ -16,6 +16,21 @@ function signToken(userId) {
   });
 }
 
+const mapAuthorDetails = (authorObj)=>{
+  return {
+    name: authorObj.name,
+    email: authorObj.email,
+    photo: authorObj.photo,
+    role: authorObj.role,
+    postsCount: authorObj.posts.length,
+    followersCount:authorObj.followers.length,
+    followingsCount:authorObj.followings.length,
+    active: authorObj.active,
+    blocked: authorObj.blocked,
+    createdAt: authorObj.createdAt,
+  }
+}
+
 //Controllers
 exports.register = catchAsync(async (req, res, next) => {
   //filter the request body and create author
@@ -25,7 +40,8 @@ exports.register = catchAsync(async (req, res, next) => {
   // Exclude the 'password' field from the response
   newAuthor.password = undefined;
   const token = signToken(newAuthor._id);
-  res.status(201).json({ status: "success", token, author: newAuthor });
+  const mappedAuthor = mapAuthorDetails(newAuthor)
+  res.status(201).json({ status: "success", token, author: mappedAuthor });
 });
 
 exports.login = catchAsync(async (req, res, next) => {
@@ -43,34 +59,21 @@ exports.login = catchAsync(async (req, res, next) => {
   const author = await Author.findOne({ email }).select("+password");
   if (!author) return next(new AppError("Wrong email or password", 401));
   if (author.blocked) return next(new AppError("Author is bloked", 403));
-
-  if (!(await author.isComparable(password, author.password)))
-    return next(new AppError("Wrong email or password", 401));
+  
+  const isComparable = await author.isComparable(password, author.password)
+  if (!isComparable) return next(new AppError("Wrong email or password", 401));
 
   if(!author.active){
      author.active = true;
      await author.save({validateBeforeSave:false})
   }
   const token = signToken(author._id);
-  const postsCount = author.posts.length;
-  const followersCount = author.followers.length;
-  const followingsCount = author.followings.length;
+  const mappedAuthor = mapAuthorDetails(author)
   res.status(200).json({
     status: "success",
     token,
     data: {
-      author: {
-        name: author.name,
-        email: author.email,
-        photo: author.photo,
-        role: author.role,
-        postsCount,
-        followersCount,
-        followingsCount,
-        active: author.active,
-        blocked: author.blocked,
-        createdAt: author.createdAt,
-      },
+      author:mappedAuthor,
     },
   });
 });
@@ -130,25 +133,12 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   await author.save();
 
   const token = signToken(author._id);
-  const postsCount = author.posts.length;
-  const followersCount = author.followers.length;
-  const followingsCount = author.followings.length;
+  const mappedAuthor = mapAuthorDetails(author)
   res.status(200).json({
     status: "success",
     token,
     data: {
-      author: {
-        name: author.name,
-        email: author.email,
-        photo: author.photo,
-        role: author.role,
-        postsCount,
-        followersCount,
-        followingsCount,
-        active: author.active,
-        blocked: author.blocked,
-        createdAt: author.createdAt,
-      },
+      author: mappedAuthor,
     },
   });
 });

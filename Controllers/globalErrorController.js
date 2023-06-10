@@ -36,7 +36,6 @@ const handleJsonWebTokenError = () => {
 
 //MULTER ERRORS
 const handleMulterErrors = (err) => {
-  console.log(err)
   if (err.code === "LIMIT_UNEXPECTED_FILE") {
     return new AppError(`The ${err.field} field is not expected`, 400);
   } else if (err.code === "LIMIT_FILE_SIZE") {
@@ -54,6 +53,7 @@ const handleMulterErrors = (err) => {
 };
 
 //ERROR IN DEV MODE VS ERROR IN PROD MODE
+//error in dev
 function handleErrorDev(res, err) {
   res.status(err.statusCode || 500).json({
     errors: err,
@@ -62,7 +62,7 @@ function handleErrorDev(res, err) {
     stack: err.stack,
   });
 }
-
+//error in prod
 function handleErrorProd(res, err) {
   if (err.isOperational) {
     const { message, statusCode, status } = err;
