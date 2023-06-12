@@ -4,6 +4,6 @@ const { unfollow } = require('../Controllers/followViewController')
 
 router.use(protect)
 
-router.delete('/:authorId', unfollow)
+router.delete('/author/:authorId', unfollow)
 
 module.exports = router

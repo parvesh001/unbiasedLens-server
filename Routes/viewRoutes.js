@@ -5,5 +5,5 @@ const { view } = require('../Controllers/followViewController')
 router.use(protect)
 
 
-router.post('/:authorId', view)
+router.post('/author/:authorId', view)
 module.exports = router
