@@ -1,27 +1,14 @@
 const multer = require("multer");
 const sharp = require("sharp");
-const {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} = require("@aws-sdk/client-s3");
-
 const Author = require("../Models/authorModel");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const filterObj = require("../Utils/filterObj");
-
-//creating client instance
-const s3Client = new S3Client({
-  credentials: {
-    accessKeyId: process.env.S3_BUCKET_ACCESS_KEY,
-    secretAccessKey: process.env.S3_BUCKET_SECRET_ACCESS_KEY,
-  },
-  region: process.env.S3_REGION,
-});
+const { setFileToS3Bucket, deleteFileFromS3Bucket } = require("../Utils/S3Bucket");
 
 //defining storage
 const storage = multer.memoryStorage();
+
 //Defining filter
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image")) {
@@ -31,33 +18,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-
 //>>>>>>> HELPER FUNCTIONS >>>>>>>>>>
-
-async function setFileToCloudAndDB(fileName, buffer, mimetype, authorId) {
-  //set image to cloud and db
-  const params = {
-    Bucket: process.env.S3_BUCKET_NAME,
-    Key: fileName,
-    Body: buffer,
-    ContentType: mimetype,
-  };
-  const command = new PutObjectCommand(params);
-  await s3Client.send(command);
-  const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
-  await Author.findByIdAndUpdate(authorId, { photo: imageUrl });
-}
-
-async function deleteCloudFile(url) {
-  const parts = url.split("amazonaws.com/");
-  const key = parts[1];
-  const deleteParams = {
-    Bucket: process.env.S3_BUCKET_NAME,
-    Key: key,
-  };
-  const deleteCommand = new DeleteObjectCommand(deleteParams);
-  await s3Client.send(deleteCommand);
-}
 
 async function getAuthorExtraData(authorId, populateField) {
   const author = await Author.findById(authorId).populate({
@@ -79,16 +40,15 @@ async function blockUnblockAuthor(req) {
   const { authorId } = req.params;
   const author = await Author.findById(authorId);
   if (!author) return next(new AppError("Author not found", 404));
- 
+
   //Block or unblock author
-  if (req.url.split('/').includes('block')) {
+  if (req.url.split("/").includes("block")) {
     author.blocked = true;
   } else {
     author.blocked = false;
   }
   await author.save({ validateBeforeSave: false });
 }
-
 
 //>>>>>>> CONTROLLERS >>>>>>>>>>
 
@@ -123,32 +83,49 @@ exports.processProfile = catchAsync(async (req, res, next) => {
 
 exports.setProfile = catchAsync(async (req, res, next) => {
   const { fileName, processedBuffer, mimetype } = req.file;
-  await setFileToCloudAndDB(
+  //Set file to bucket
+  await setFileToS3Bucket(
+    process.env.S3_BUCKET_NAME,
     fileName,
     processedBuffer,
     mimetype,
-    req.author._id
+    next
   );
+
+  //Set file to mongodb
+  const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
+  await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
+
+  //Send response
   res.status(200).json({ status: "success", message: "file uploaded" });
 });
 
 exports.updateProfile = catchAsync(async (req, res, next) => {
   //First delete exiting one
-  await deleteCloudFile(req.author.photo);
+  await deleteFileFromS3Bucket(req.author.photo);
 
-  //Uploading new one
+  //Then, upload new one
   const { fileName, processedBuffer, mimetype } = req.file;
-  await setFileToCloudAndDB(
+
+  //Set file to bucket
+  await setFileToS3Bucket(
+    process.env.S3_BUCKET_NAME,
     fileName,
     processedBuffer,
     mimetype,
-    req.author._id
+    next
   );
+
+  //Set file to mongodb
+  const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
+  await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
+
+  //Send back response
   res.status(200).json({ status: "success", message: "profile updated" });
 });
 
 exports.deleteProfile = catchAsync(async (req, res, next) => {
-  await deleteCloudFile(req.author.photo);
+  await deleteFileFromS3Bucket(req.author.photo);
   const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/authors/default.jpg`;
   await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
   res
