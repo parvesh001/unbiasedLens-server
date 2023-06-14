@@ -20,18 +20,18 @@ const blogPostSchema = new mongoose.Schema({
    type:String,
    required:[true, "Category is required"]
   },
-  likes: {
-    type: Number,
-    default: 0
-  },
-  dislikes: {
-    type: Number,
-    default: 0
-  },
-  views: {
-    type: Number,
-    default: 0
-  },
+  likes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Author'
+  }],
+  dislikes:  [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Author'
+  }],
+  views:  [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Author'
+  }],
   image: {
     type: String,
     required: [true, "Image is required"]

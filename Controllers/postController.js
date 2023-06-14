@@ -181,11 +181,103 @@ exports.deletePost = catchAsync(async (req, res, next) => {
   await deleteFileFromS3Bucket(post.image, next);
 
   // Delete the post from the database
-  await BlogPost.findByIdAndDelete(post._id)
+  await BlogPost.findByIdAndDelete(post._id);
 
-  req.author.posts.pull(post._id)
-  await req.author.save({validateBeforeSave:false})
+  req.author.posts.pull(post._id);
+  await req.author.save({ validateBeforeSave: false });
   res
     .status(200)
     .json({ status: "success", message: "Post deleted successfully" });
 });
+
+exports.likePost = catchAsync(async (req, res, next) => {
+  const postId = req.params.postId;
+  const authorId = req.author._id;
+
+  const blogPost = await BlogPost.findById(postId);
+
+  if (!blogPost) {
+    throw new AppError("Blog post not found", 404);
+  }
+
+  // Check if the author has already liked the post
+  if (blogPost.likes.includes(authorId)) {
+    throw new AppError("You have already liked this post", 400);
+  }
+
+  // Check if the author has previously disliked the post
+  if (blogPost.dislikes.includes(authorId)) {
+    // Remove the author's dislike
+    blogPost.dislikes.pull(authorId);
+  }
+
+  // Add the author's user ID to the likes array
+  blogPost.likes.push(authorId);
+
+  await blogPost.save();
+
+  res.status(200).json({ status: "success", data: blogPost });
+});
+
+exports.dislikePost = catchAsync(async (req, res, next) => {
+  const postId = req.params.postId;
+  const authorId = req.author._id;
+
+  const blogPost = await BlogPost.findById(postId);
+
+  if (!blogPost) {
+    throw new AppError("Blog post not found", 404);
+  }
+
+  // Check if the author has already disliked the post
+  if (blogPost.dislikes.includes(authorId)) {
+    throw new AppError("You have already disliked this post", 400);
+  }
+
+  // Check if the author has previously liked the post
+  if (blogPost.likes.includes(authorId)) {
+    // Remove the author's like
+    blogPost.likes.pull(authorId);
+  }
+
+  // Add the author's user ID to the dislikes array
+  blogPost.dislikes.push(authorId);
+
+  await blogPost.save();
+
+  res.status(200).json({ status: "success", data: blogPost });
+});
+
+exports.viewPost = catchAsync(async (req, res, next) => {
+  const postId = req.params.postId;
+  const authorId = req.author._id;
+
+  const blogPost = await BlogPost.findById(postId);
+
+  if (!blogPost) {
+    throw new AppError("Blog post not found", 404);
+  }
+
+  // Check if the author has previously viewed the post
+  if (blogPost.views.includes(authorId)) {
+    return res.status(200).json({ status: "success", data: blogPost });
+  }
+
+  // Add the author's user ID to the views array
+  blogPost.views.push(authorId);
+  await blogPost.save();
+
+  res.status(200).json({ status: "success", data: blogPost });
+});
+
+exports.getPost = catchAsync(async (req, res, next) => {
+  const { postId } = req.params;
+  const post = await BlogPost.findById(postId);
+  if (!post) throw new AppError("Post not found", 404);
+  res.status(200).json({ status: "success", data: { post } });
+});
+
+exports.getPosts = catchAsync(async(req,res,next)=>{
+  const posts = await BlogPost.find();
+  res.status(200).json({status:'success', data:{posts}})
+})

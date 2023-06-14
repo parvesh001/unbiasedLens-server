@@ -5,12 +5,17 @@ const {
   processFile,
   updatePost,
   deletePost,
+  likePost,
+  dislikePost,
+  viewPost,
+  getPost,
+  getPosts,
 } = require("../Controllers/postController");
 
 const router = require("express").Router();
 
-router.get("/");
-router.get("/post/:postId");
+router.get("/", getPosts);
+router.get("/post/:postId", getPost);
 
 router.use(protect);
 
@@ -20,7 +25,8 @@ router
   .patch(uploadFile, processFile, updatePost)
   .delete(deletePost);
 
-router.put("/post/:postId/like");
-router.put("/post/:postId/dislike");
-router.put("/post/:postId/view");
+router.put("/post/:postId/like", likePost);
+router.put("/post/:postId/dislike", dislikePost);
+router.put("/post/:postId/view", viewPost);
+
 module.exports = router;
