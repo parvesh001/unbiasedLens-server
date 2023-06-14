@@ -6,7 +6,7 @@ const BlogPost = require("../Models/postModel");
 const catchAsync = require("../Utils/catchAsync");
 const filterObj = require("../Utils/filterObj");
 const Category = require("../Models/categoryModel");
-const { setFileToS3Bucket } = require("../Utils/S3Bucket");
+const { setFileToS3Bucket, deleteFileFromS3Bucket } = require("../Utils/S3Bucket");
 
 //defining storage
 const storage = multer.memoryStorage();
@@ -61,23 +61,7 @@ exports.processFile = catchAsync(async (req, res, next) => {
 });
 
 exports.createPost = catchAsync(async (req, res, next) => {
-  //Set file to cloud
   const { fileName, processedBuffer, mimetype } = req.file;
-  //Query categories from the DB
-  let availableCategories = await Category.find();
-  availableCategories = availableCategories.map((category) => category.name);
-  if (!availableCategories.includes(req.body.category)) {
-    return next(new AppError(`Please select provided category`, 400));
-  }
-  //Set file and data to the db
-  const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
-  const filteredObj = filterObj(req.body, "title", "content", "category");
-  const newBlogPost = await BlogPost.create({
-    ...filteredObj,
-    image: imageUrl,
-    author: req.author._id,
-  });
-
   //set file to s3
   await setFileToS3Bucket(
     process.env.S3_BUCKET_NAME,
@@ -87,5 +71,29 @@ exports.createPost = catchAsync(async (req, res, next) => {
     next
   );
 
-  res.status(200).json({ status: "success", data: { BlogPost: newBlogPost } });
+  //set data and file url in mongodb
+  let newBlogPost;
+  let  imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
+  try {
+    //first check if category is expected
+    let availableCategories = await Category.find();
+    availableCategories = availableCategories.map((category) => category.name);
+    
+    if (!availableCategories.includes(req.body.category)) {
+      throw new AppError(`Please select provided category`, 400);
+    }
+
+    //now, Set file url and data to the db
+    const filteredObj = filterObj(req.body, "title", "content", "category");
+    newBlogPost = await BlogPost.create({
+      ...filteredObj,
+      image: imageUrl,
+      author: req.author._id,
+    });
+    res.status(200).json({ status: "success", data: { BlogPost: newBlogPost } });
+  } catch (err) {
+    //undo file upload from s3 bucket
+    await deleteFileFromS3Bucket(imageUrl, next);
+    next(err);
+  }
 });

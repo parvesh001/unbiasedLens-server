@@ -102,7 +102,7 @@ exports.setProfile = catchAsync(async (req, res, next) => {
 
 exports.updateProfile = catchAsync(async (req, res, next) => {
   //First delete exiting one
-  await deleteFileFromS3Bucket(req.author.photo);
+  await deleteFileFromS3Bucket(req.author.photo, next);
 
   //Then, upload new one
   const { fileName, processedBuffer, mimetype } = req.file;
@@ -125,7 +125,7 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteProfile = catchAsync(async (req, res, next) => {
-  await deleteFileFromS3Bucket(req.author.photo);
+  await deleteFileFromS3Bucket(req.author.photo, next);
   const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/authors/default.jpg`;
   await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
   res

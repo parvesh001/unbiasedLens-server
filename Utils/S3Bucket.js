@@ -35,7 +35,7 @@ exports.setFileToS3Bucket = async (
   }
 };
 
-exports.deleteFileFromS3Bucket = async (url) => {
+exports.deleteFileFromS3Bucket = async (url, next) => {
   const parts = url.split("amazonaws.com/");
   const key = parts[1];
   const deleteParams = {
@@ -43,5 +43,9 @@ exports.deleteFileFromS3Bucket = async (url) => {
     Key: key,
   };
   const deleteCommand = new DeleteObjectCommand(deleteParams);
-  await s3Client.send(deleteCommand);
+  try {
+    await s3Client.send(deleteCommand);
+  } catch (err) {
+    next(err)
+  }
 }
