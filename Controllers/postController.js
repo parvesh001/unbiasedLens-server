@@ -6,7 +6,10 @@ const BlogPost = require("../Models/postModel");
 const catchAsync = require("../Utils/catchAsync");
 const filterObj = require("../Utils/filterObj");
 const Category = require("../Models/categoryModel");
-const { setFileToS3Bucket, deleteFileFromS3Bucket } = require("../Utils/S3Bucket");
+const {
+  setFileToS3Bucket,
+  deleteFileFromS3Bucket,
+} = require("../Utils/S3Bucket");
 
 //defining storage
 const storage = multer.memoryStorage();
@@ -60,40 +63,129 @@ exports.processFile = catchAsync(async (req, res, next) => {
   next();
 });
 
-exports.createPost = catchAsync(async (req, res, next) => {
+exports.createPost = async (req, res, next) => {
   const { fileName, processedBuffer, mimetype } = req.file;
-  //set file to s3
-  await setFileToS3Bucket(
-    process.env.S3_BUCKET_NAME,
-    fileName,
-    processedBuffer,
-    mimetype,
-    next
-  );
 
-  //set data and file url in mongodb
-  let newBlogPost;
-  let  imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
+  let imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
   try {
+    //set file to s3
+    await setFileToS3Bucket(
+      process.env.S3_BUCKET_NAME,
+      fileName,
+      processedBuffer,
+      mimetype,
+      next
+    );
+
     //first check if category is expected
     let availableCategories = await Category.find();
     availableCategories = availableCategories.map((category) => category.name);
-    
+
     if (!availableCategories.includes(req.body.category)) {
       throw new AppError(`Please select provided category`, 400);
     }
 
     //now, Set file url and data to the db
     const filteredObj = filterObj(req.body, "title", "content", "category");
-    newBlogPost = await BlogPost.create({
+    let newBlogPost = await BlogPost.create({
       ...filteredObj,
       image: imageUrl,
       author: req.author._id,
     });
-    res.status(200).json({ status: "success", data: { BlogPost: newBlogPost } });
+    //Set post reference inside author
+    req.author.posts.push(newBlogPost._id);
+    await req.author.save({ validateBeforeSave: false });
+    //send response
+    res
+      .status(200)
+      .json({ status: "success", data: { BlogPost: newBlogPost } });
   } catch (err) {
     //undo file upload from s3 bucket
     await deleteFileFromS3Bucket(imageUrl, next);
     next(err);
   }
+};
+
+exports.updatePost = async (req, res, next) => {
+  const { postId } = req.params;
+  const { fileName, processedBuffer, mimetype } = req.file;
+  const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
+  try {
+    // Check if the post exists
+    const post = await BlogPost.findById(postId);
+    if (!post) {
+      throw new AppError("Post not found", 404);
+    }
+
+    // Check if the user has permission to update the post
+    if (!post.author.equals(req.author._id)) {
+      throw new AppError("You are not authorized to update this post", 403);
+    }
+
+    //Store the url of previous image to delete latter from cloud
+    let oldImageUrl = post.image;
+
+    // Upload the new image to the S3 bucket
+    await setFileToS3Bucket(
+      process.env.S3_BUCKET_NAME,
+      fileName,
+      processedBuffer,
+      mimetype,
+      next
+    );
+
+    // Update the post with the new data
+    const { title, content, category } = filterObj(
+      req.body,
+      "title",
+      "content",
+      "category"
+    );
+    post.title = title;
+    post.content = content;
+    post.category = category;
+    post.image = imageUrl;
+    // Save the updated post
+    const updatedPost = await post.save();
+
+    // Delete the previous image from the S3 bucket
+    await deleteFileFromS3Bucket(oldImageUrl, next);
+
+    // Send the response
+    res
+      .status(200)
+      .json({ status: "success", data: { blogPost: updatedPost } });
+  } catch (err) {
+    //Delete post from the cloud if there is error
+    await deleteFileFromS3Bucket(imageUrl, next);
+    next(err);
+  }
+};
+
+exports.deletePost = catchAsync(async (req, res, next) => {
+  const { postId } = req.params;
+
+  // Find the post to be deleted
+  const post = await BlogPost.findById(postId);
+
+  if (!post) {
+    throw new AppError("Post not found", 404);
+  }
+
+  // Check if the user has permission to update the post
+  if (!post.author.equals(req.author._id)) {
+    throw new AppError("You are not authorized to update this post", 403);
+  }
+
+  // Delete the image from the S3 bucket
+  await deleteFileFromS3Bucket(post.image, next);
+
+  // Delete the post from the database
+  await BlogPost.findByIdAndDelete(post._id)
+
+  req.author.posts.pull(post._id)
+  await req.author.save({validateBeforeSave:false})
+  res
+    .status(200)
+    .json({ status: "success", message: "Post deleted successfully" });
 });

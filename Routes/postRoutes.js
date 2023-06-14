@@ -1,17 +1,26 @@
-const { protect } = require('../Controllers/authcontroller');
-const { uploadFile, createPost, processFile } = require('../Controllers/postController');
+const { protect } = require("../Controllers/authcontroller");
+const {
+  uploadFile,
+  createPost,
+  processFile,
+  updatePost,
+  deletePost,
+} = require("../Controllers/postController");
 
-const router = require('express').Router()
+const router = require("express").Router();
 
-router.get('/')
-router.get('/post/:postId')
+router.get("/");
+router.get("/post/:postId");
 
-router.use(protect)
+router.use(protect);
 
-router.post('/', uploadFile, processFile, createPost)
-router.route('/post/:postId').patch().delete()
+router.post("/", uploadFile, processFile, createPost);
+router
+  .route("/post/:postId")
+  .patch(uploadFile, processFile, updatePost)
+  .delete(deletePost);
 
-router.put('/post/:postId/like')
-router.put('/post/:postId/dislike')
-router.put('/post/:postId/view')
+router.put("/post/:postId/like");
+router.put("/post/:postId/dislike");
+router.put("/post/:postId/view");
 module.exports = router;
