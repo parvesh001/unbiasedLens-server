@@ -169,6 +169,13 @@ exports.getFollowings = catchAsync(async (req, res, next) => {
   res.status(200).json({ status: "success", data: { followings } });
 });
 
+exports.getAuthorPosts = catchAsync(async(req,res,next)=>{
+  const {authorId} = req.params;
+  const author = await Author.findById(authorId).populate({path:'posts', select:'-author'})
+  const authorPosts = [...author.posts]
+  res.status(200).json({ status: "success", data: { authorPosts } });
+})
+
 exports.updateAuthor = catchAsync(async (req, res, next) => {
   const filteredObj = filterObj(req.body, "name", "email");
   const updatedAuthor = await Author.findByIdAndUpdate(

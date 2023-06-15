@@ -48,7 +48,7 @@ const authorSchema = new mongoose.Schema(
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Author" }],
     followings: [{ type: mongoose.Schema.Types.ObjectId, ref: "Author" }],
     profileViewers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Author" }],
-    posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
+    posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "BlogPost" }],
     active: {
       type: Boolean,
       default: true,

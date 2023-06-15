@@ -23,6 +23,23 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const getPosts = async (category, search) => {
+  let availableCategories = await Category.find();
+  availableCategories = availableCategories.map((category) => category.name);
+
+  if (!category) {
+    category = [...availableCategories];
+  } else {
+    category = [category];
+  }
+  const query = BlogPost.find({
+    title: { $regex: search || "", $options: "i" },
+  })
+    .where("category")
+    .in(category).populate({path:'author', select:'name photo'});
+  return query;
+};
+
 exports.uploadFile = multer({
   storage,
   fileFilter,
@@ -277,7 +294,24 @@ exports.getPost = catchAsync(async (req, res, next) => {
   res.status(200).json({ status: "success", data: { post } });
 });
 
-exports.getPosts = catchAsync(async(req,res,next)=>{
-  const posts = await BlogPost.find();
-  res.status(200).json({status:'success', data:{posts}})
-})
+exports.getPosts = catchAsync(async (req, res, next) => {
+  let { search, category } = req.query;
+
+  const posts = await getPosts(category, search);
+  res.status(200).json({ status: "success", data: { posts } });
+});
+
+exports.getPostsSuggestions = catchAsync(async (req, res, next) => {
+  let { search, category } = req.query;
+
+  const posts = await getPosts(category, search);
+
+  const suggestions = posts.map((post) => post.title);
+
+  res.status(200).json({ status: "success", data: { suggestions } });
+});
+
+
+
+
+

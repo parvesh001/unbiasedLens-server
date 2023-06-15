@@ -10,11 +10,13 @@ const {
   viewPost,
   getPost,
   getPosts,
+  getPostsSuggestions,
 } = require("../Controllers/postController");
 
 const router = require("express").Router();
 
 router.get("/", getPosts);
+router.get("/suggestions", getPostsSuggestions)
 router.get("/post/:postId", getPost);
 
 router.use(protect);
