@@ -1,6 +1,11 @@
 //Third party packages
 const express = require("express");
 const cors = require("cors");
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp')
 
 //Local files
 const globalErrorHandler = require("./Controllers/globalErrorController");
@@ -15,9 +20,23 @@ const blogPostRouter = require("./Routes/postRoutes");
 const commentRouter = require("./Routes/commentRoutes");
 
 const app = express();
+const rateLimiter = rateLimit({
+  max:120,
+  windowMs:60*60*1000,
+  message:'Too many requests!'
+})
 
+//Global Middlewares
+app.use(helmet())
 app.use(cors());
+app.use(rateLimiter);
 app.use(express.json());
+
+//Data Sanitization against NoSQL query injection
+app.use(mongoSanitize())
+//Data Sanitization against XSS
+app.use(xss())
+app.use(hpp({whitelist:[]}))
 
 //Routers
 app.use("/api/v1/authors", authorRouter);
