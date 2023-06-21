@@ -23,21 +23,13 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const getPosts = async (category, search) => {
-  let availableCategories = await Category.find();
-  availableCategories = availableCategories.map((category) => category.name);
+const getPosts = async (req) => {
+  const { category, search } = req.query;
+  const posts = await BlogPost.find({
+    $and: [{ category }, { title: { $regex: search || "", $options: "i" } }],
+  }).populate({ path: "author", select: "name photo" });
 
-  if (!category) {
-    category = [...availableCategories];
-  } else {
-    category = [category];
-  }
-  const query = BlogPost.find({
-    title: { $regex: search || "", $options: "i" },
-  })
-    .where("category")
-    .in(category).populate({path:'author', select:'name photo'});
-  return query;
+  return posts;
 };
 
 exports.uploadFile = multer({
@@ -236,6 +228,20 @@ exports.likePost = catchAsync(async (req, res, next) => {
   res.status(200).json({ status: "success", data: blogPost });
 });
 
+exports.removeLike = catchAsync(async(req,res,next)=>{
+  const postId = req.params.postId;
+  const authorId = req.author._id;
+
+  const post  = await BlogPost.findById(postId)
+
+  if(!post) throw new AppError("Blog post not found", 404);
+  
+  post.likes.pull(authorId)
+  await post.save();
+
+  res.status(200).json({ status: "success", data: post });
+})
+
 exports.dislikePost = catchAsync(async (req, res, next) => {
   const postId = req.params.postId;
   const authorId = req.author._id;
@@ -264,6 +270,20 @@ exports.dislikePost = catchAsync(async (req, res, next) => {
 
   res.status(200).json({ status: "success", data: blogPost });
 });
+
+exports.removeDislike = catchAsync(async(req,res,next)=>{
+  const postId = req.params.postId;
+  const authorId = req.author._id;
+
+  const post  = await BlogPost.findById(postId)
+
+  if(!post) throw new AppError("Blog post not found", 404);
+  
+  post.dislikes.pull(authorId)
+  await post.save();
+
+  res.status(200).json({ status: "success", data: post });
+})
 
 exports.viewPost = catchAsync(async (req, res, next) => {
   const postId = req.params.postId;
@@ -295,23 +315,23 @@ exports.getPost = catchAsync(async (req, res, next) => {
 });
 
 exports.getPosts = catchAsync(async (req, res, next) => {
-  let { search, category } = req.query;
+  const posts = await getPosts(req);
 
-  const posts = await getPosts(category, search);
-  res.status(200).json({ status: "success", data: { posts } });
+  res
+    .status(200)
+    .json({ status: "success", results: posts.length, data: { posts } });
 });
 
 exports.getPostsSuggestions = catchAsync(async (req, res, next) => {
-  let { search, category } = req.query;
-
-  const posts = await getPosts(category, search);
+  const posts = await getPosts(req);
 
   const suggestions = posts.map((post) => post.title);
 
-  res.status(200).json({ status: "success", data: { suggestions } });
+  res
+    .status(200)
+    .json({
+      status: "success",
+      results: suggestions.length,
+      data: { suggestions },
+    });
 });
-
-
-
-
-

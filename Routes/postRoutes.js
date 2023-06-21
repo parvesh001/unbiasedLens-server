@@ -11,6 +11,8 @@ const {
   getPost,
   getPosts,
   getPostsSuggestions,
+  removeLike,
+  removeDislike,
 } = require("../Controllers/postController");
 
 const router = require("express").Router();
@@ -28,7 +30,9 @@ router
   .delete(deletePost);
 
 router.put("/post/:postId/like", likePost);
+router.put("/post/:postId/removeLike", removeLike);
 router.put("/post/:postId/dislike", dislikePost);
+router.put("/post/:postId/removeDislike", removeDislike);
 router.put("/post/:postId/view", viewPost);
 
 module.exports = router;
