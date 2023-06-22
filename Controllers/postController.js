@@ -27,7 +27,7 @@ const getPosts = async (req) => {
   const { category, search } = req.query;
   const posts = await BlogPost.find({
     $and: [{ category }, { title: { $regex: search || "", $options: "i" } }],
-  }).populate({ path: "author", select: "name photo" });
+  }).populate({ path: "author", select: "name photo" }).select('-content');
 
   return posts;
 };
