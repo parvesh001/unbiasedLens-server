@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const slugify =  require('slugify')
 
 const blogPostSchema = new mongoose.Schema(
   {
@@ -43,11 +44,17 @@ const blogPostSchema = new mongoose.Schema(
       type: String,
       required: [true, "Image is required"],
     },
+    slug:String
   },
   { timestamps: true }
 );
 
-blogPostSchema.index({ category: 1 });
+blogPostSchema.index({ slug: 1 });
+
+blogPostSchema.pre("save", function (next) {
+  this.slug = slugify(this.category, { lower: true });
+  next();
+});
 
 const BlogPost = mongoose.model("BlogPost", blogPostSchema);
 
