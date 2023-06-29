@@ -18,6 +18,7 @@ function signToken(userId) {
 
 const mapAuthorDetails = (authorObj)=>{
   return {
+    _id:authorObj._id,
     name: authorObj.name,
     email: authorObj.email,
     photo: authorObj.photo,

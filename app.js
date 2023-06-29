@@ -21,7 +21,7 @@ const commentRouter = require("./Routes/commentRoutes");
 
 const app = express();
 const rateLimiter = rateLimit({
-  max:120,
+  max:200000,
   windowMs:60*60*1000,
   message:'Too many requests!'
 })

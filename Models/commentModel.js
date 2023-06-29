@@ -17,8 +17,10 @@ const commentSchema = new mongoose.Schema(
       required: [true, "Content field is required"],
     },
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+  { timestamps: true,toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+commentSchema.index({blogPost:1} )
 
 const Comment = mongoose.model("Comment", commentSchema);
 

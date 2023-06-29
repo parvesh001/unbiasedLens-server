@@ -46,15 +46,26 @@ const blogPostSchema = new mongoose.Schema(
     },
     slug:String
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+//Indexing
 blogPostSchema.index({ slug: 1 });
 
+// ////Add Virtual field and Populate
+// blogPostSchema.virtual('comments', {
+//   ref: 'Comment',
+//   foreignField: 'blogPost',
+//   localField: '_id',
+// });
+
+//Document middleware
 blogPostSchema.pre("save", function (next) {
   this.slug = slugify(this.category, { lower: true });
   next();
 });
+
+
 
 const BlogPost = mongoose.model("BlogPost", blogPostSchema);
 

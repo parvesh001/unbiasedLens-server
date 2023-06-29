@@ -314,7 +314,7 @@ exports.viewPost = catchAsync(async (req, res, next) => {
 
 exports.getPost = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
-  const post = await BlogPost.findById(postId);
+  const post = await BlogPost.findById(postId).populate({ path: "author", select: "_id name email photo" });
   if (!post) throw new AppError("Post not found", 404);
   res.status(200).json({ status: "success", data: { post } });
 });
