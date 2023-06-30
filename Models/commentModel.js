@@ -22,6 +22,11 @@ const commentSchema = new mongoose.Schema(
 
 commentSchema.index({blogPost:1} )
 
+commentSchema.post('save', async function(doc, next) {
+  await doc.populate('author', '_id name email photo')
+  next();
+});
+
 const Comment = mongoose.model("Comment", commentSchema);
 
 module.exports = Comment;

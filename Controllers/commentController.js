@@ -9,7 +9,7 @@ exports.createComment = catchAsync(async (req, res, next) => {
     blogPost: blogPostId,
     author: req.author._id,
     content,
-  });
+  })
   res.status(201).json({ status: "success", data: { comment: newComment } });
 });
 
