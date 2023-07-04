@@ -23,6 +23,7 @@ const {
   blockAuthor,
   unblockAuthor,
   getAuthorPosts,
+  getMe,
 } = require("../Controllers/authorController");
 
 router.post("/register", register);
@@ -36,7 +37,7 @@ router.get("/author/:authorId/posts", getAuthorPosts)
 
 //From here protected APIs start
 router.use(protect);
-
+router.get('/getMe', getMe)
 router.get("/myProfileViewers", getMyProfileViewers)
 router.post("/uploadProfile", uploadProfile, processProfile, setProfile);
 router.patch("/updateProfile",uploadProfile, processProfile, updateProfile);

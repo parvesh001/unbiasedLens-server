@@ -4,7 +4,10 @@ const Author = require("../Models/authorModel");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const filterObj = require("../Utils/filterObj");
-const { setFileToS3Bucket, deleteFileFromS3Bucket } = require("../Utils/S3Bucket");
+const {
+  setFileToS3Bucket,
+  deleteFileFromS3Bucket,
+} = require("../Utils/S3Bucket");
 
 //defining storage
 const storage = multer.memoryStorage();
@@ -133,26 +136,55 @@ exports.deleteProfile = catchAsync(async (req, res, next) => {
     .json({ status: "success", message: "Profile picture deleted." });
 });
 
+exports.getMe = catchAsync(async (req, res, next) => {
+  const author = await Author.findById(req.author._id)
+    .populate({
+      path: "profileViewers",
+      select: "_id name photo",
+      match: { blocked: false, active: true },
+    })
+    .populate({
+      path: "followers",
+      select: "_id name photo",
+      match: { blocked: false, active: true },
+    })
+    .populate({
+      path: "followings",
+      select: "_id name photo",
+      match: { blocked: false, active: true },
+    });
+    if(!author) return next(new AppError("Author is not found", 404));
+    res.status(200).json({
+      status: "success",
+      data: {
+        author,
+      },
+    });
+});
+
 exports.getAuthor = catchAsync(async (req, res, next) => {
   const { authorId } = req.params;
-  const author = await Author.findById(authorId);
+  const author = await Author.findById(authorId)
+    .populate({
+      path: "followers",
+      select: "_id name photo",
+      match: { blocked: false, active: true },
+    })
+    .populate({
+      path: "followings",
+      select: "_id name photo",
+      match: { blocked: false, active: true },
+    })
+    .populate({ path: "posts", select: "-content" })
+    .select("-profileViewers");
+
   if (!author || !author.active || author.blocked)
     return next(new AppError("Author is not found", 404));
-  const postsCount = author.posts.length;
-  const followersCount = author.followers.length;
-  const followingsCount = author.followings.length;
+
   res.status(200).json({
     status: "success",
     data: {
-      author: {
-        name: author.name,
-        email: author.email,
-        photo: author.photo,
-        postsCount,
-        followersCount,
-        followingsCount,
-        createdAt: author.createdAt,
-      },
+      author,
     },
   });
 });
@@ -169,12 +201,15 @@ exports.getFollowings = catchAsync(async (req, res, next) => {
   res.status(200).json({ status: "success", data: { followings } });
 });
 
-exports.getAuthorPosts = catchAsync(async(req,res,next)=>{
-  const {authorId} = req.params;
-  const author = await Author.findById(authorId).populate({path:'posts', select:'-author'})
-  const authorPosts = [...author.posts]
+exports.getAuthorPosts = catchAsync(async (req, res, next) => {
+  const { authorId } = req.params;
+  const author = await Author.findById(authorId).populate({
+    path: "posts",
+    select: "-author",
+  });
+  const authorPosts = [...author.posts];
   res.status(200).json({ status: "success", data: { authorPosts } });
-})
+});
 
 exports.updateAuthor = catchAsync(async (req, res, next) => {
   const filteredObj = filterObj(req.body, "name", "email");
