@@ -27,7 +27,7 @@ const rateLimiter = rateLimit({
 })
 
 //Global Middlewares
-app.use(helmet())
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }))
 app.use(cors());
 app.use(rateLimiter);
 app.use(express.json());
