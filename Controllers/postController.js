@@ -31,7 +31,7 @@ const getPosts = async (req) => {
       { title: { $regex: search || "", $options: "i" } },
     ],
   })
-    .populate({ path: "author", select: "name photo" })
+    .populate({ path: "author", select: "name photo email" })
     .select("-content");
 
   return posts;

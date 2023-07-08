@@ -16,7 +16,7 @@ exports.createComment = catchAsync(async (req, res, next) => {
 exports.getCommentsByBlogPost = catchAsync(async (req, res, next) => {
   const { blogPostId } = req.params;
   const comments = await Comment.find({ blogPost: blogPostId })
-    .populate("author", "name photo") 
+    .populate("author", "name photo email") 
     .sort({ createdAt: -1 });
   res.status(200).json({ status: "success", data: { comments } });
 });

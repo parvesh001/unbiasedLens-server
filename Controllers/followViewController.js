@@ -49,9 +49,16 @@ exports.view = catchAsync(async (req, res, next) => {
 
   const viewedAuthor = await Author.findById(authorId);
   if (!viewedAuthor) return next(new AppError("Author not found", 404));
+  if (
+    viewedAuthor._id.toString() !== req.author._id.toString() &&
+    !viewedAuthor.profileViewers.includes(req.author._id)
+  ) {
+    viewedAuthor.profileViewers.push(req.author._id);
+    await viewedAuthor.save({ validateBeforeSave: false });
+    res.status(200).json({ status: "success" });
+  }else{
+    res.status(200).json({message:'already viewed or viewing your own profile'})
+  }
 
-  viewedAuthor.profileViewers.push(req.author._id);
-  await viewedAuthor.save({ validateBeforeSave: false });
-
-  res.status(200).json({ status: "success" });
+  
 });

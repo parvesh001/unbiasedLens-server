@@ -1,6 +1,7 @@
 const multer = require("multer");
 const sharp = require("sharp");
 const Author = require("../Models/authorModel");
+const BlogPost = require('../Models/postModel')
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const filterObj = require("../Utils/filterObj");
@@ -34,6 +35,7 @@ async function getAuthorExtraData(authorId, populateField) {
       _id: data._id,
       name: data.name,
       photo: data.photo,
+      email:data.email
     };
   });
   return data;
@@ -100,7 +102,7 @@ exports.setProfile = catchAsync(async (req, res, next) => {
   await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
 
   //Send response
-  res.status(200).json({ status: "success", message: "file uploaded" });
+  res.status(200).json({ status: "success", message: "file uploaded", data:{newImageUrl:imageUrl} });
 });
 
 exports.updateProfile = catchAsync(async (req, res, next) => {
@@ -124,7 +126,7 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
   await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
 
   //Send back response
-  res.status(200).json({ status: "success", message: "profile updated" });
+  res.status(200).json({ status: "success", message: "profile updated", data:{newImageUrl:imageUrl} } );
 });
 
 exports.deleteProfile = catchAsync(async (req, res, next) => {
@@ -140,17 +142,17 @@ exports.getMe = catchAsync(async (req, res, next) => {
   const author = await Author.findById(req.author._id)
     .populate({
       path: "profileViewers",
-      select: "_id name photo",
+      select: "_id name photo email",
       match: { blocked: false, active: true },
     })
     .populate({
       path: "followers",
-      select: "_id name photo",
+      select: "_id name photo email",
       match: { blocked: false, active: true },
     })
     .populate({
       path: "followings",
-      select: "_id name photo",
+      select: "_id name photo email",
       match: { blocked: false, active: true },
     });
     if(!author) return next(new AppError("Author is not found", 404));
@@ -203,11 +205,8 @@ exports.getFollowings = catchAsync(async (req, res, next) => {
 
 exports.getAuthorPosts = catchAsync(async (req, res, next) => {
   const { authorId } = req.params;
-  const author = await Author.findById(authorId).populate({
-    path: "posts",
-    select: "-author",
-  });
-  const authorPosts = [...author.posts];
+  const authorPosts = await BlogPost.find({author:authorId}).populate({ path: "author", select: "name photo email" })
+  .select("-content");
   res.status(200).json({ status: "success", data: { authorPosts } });
 });
 
