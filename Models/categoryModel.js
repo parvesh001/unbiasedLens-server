@@ -13,7 +13,7 @@ const categorySchema = new mongoose.Schema(
       required: true,
       maxLength: [
         100,
-        "Description must be less than or equal to 50 characters!",
+        "Description must be less than or equal to 100 characters!",
       ],
     },
     slug: String,

@@ -169,19 +169,19 @@ exports.getAuthor = catchAsync(async (req, res, next) => {
   const author = await Author.findById(authorId)
     .populate({
       path: "followers",
-      select: "_id name photo",
+      select: "_id name photo email",
       match: { blocked: false, active: true },
     })
     .populate({
       path: "followings",
-      select: "_id name photo",
+      select: "_id name photo email",
       match: { blocked: false, active: true },
     })
     .populate({ path: "posts", select: "-content" })
     .select("-profileViewers");
 
   if (!author || !author.active || author.blocked)
-    return next(new AppError("Author is not found", 404));
+    return next(new AppError("Author not found", 404));
 
   res.status(200).json({
     status: "success",
@@ -230,7 +230,7 @@ exports.getMyProfileViewers = catchAsync(async (req, res, next) => {
 
 //Admin specific tasks, highly critical and restricted
 exports.getAllAuthors = catchAsync(async (req, res, next) => {
-  const authors = await Author.find();
+  const authors = await Author.find({role:{$ne:'admin'}});
   res.status(200).json({ status: "success", data: { authors } });
 });
 
