@@ -1,7 +1,7 @@
 const multer = require("multer");
 const sharp = require("sharp");
 const Author = require("../Models/authorModel");
-const BlogPost = require('../Models/postModel')
+const BlogPost = require("../Models/postModel");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const filterObj = require("../Utils/filterObj");
@@ -35,7 +35,7 @@ async function getAuthorExtraData(authorId, populateField) {
       _id: data._id,
       name: data.name,
       photo: data.photo,
-      email:data.email
+      email: data.email,
     };
   });
   return data;
@@ -102,7 +102,11 @@ exports.setProfile = catchAsync(async (req, res, next) => {
   await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
 
   //Send response
-  res.status(200).json({ status: "success", message: "file uploaded", data:{newImageUrl:imageUrl} });
+  res.status(200).json({
+    status: "success",
+    message: "file uploaded",
+    data: { newImageUrl: imageUrl },
+  });
 });
 
 exports.updateProfile = catchAsync(async (req, res, next) => {
@@ -126,7 +130,11 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
   await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
 
   //Send back response
-  res.status(200).json({ status: "success", message: "profile updated", data:{newImageUrl:imageUrl} } );
+  res.status(200).json({
+    status: "success",
+    message: "profile updated",
+    data: { newImageUrl: imageUrl },
+  });
 });
 
 exports.deleteProfile = catchAsync(async (req, res, next) => {
@@ -155,13 +163,13 @@ exports.getMe = catchAsync(async (req, res, next) => {
       select: "_id name photo email",
       match: { blocked: false, active: true },
     });
-    if(!author) return next(new AppError("Author is not found", 404));
-    res.status(200).json({
-      status: "success",
-      data: {
-        author,
-      },
-    });
+  if (!author) return next(new AppError("Author is not found", 404));
+  res.status(200).json({
+    status: "success",
+    data: {
+      author,
+    },
+  });
 });
 
 exports.getAuthor = catchAsync(async (req, res, next) => {
@@ -205,9 +213,20 @@ exports.getFollowings = catchAsync(async (req, res, next) => {
 
 exports.getAuthorPosts = catchAsync(async (req, res, next) => {
   const { authorId } = req.params;
-  const authorPosts = await BlogPost.find({author:authorId}).populate({ path: "author", select: "name photo email" })
-  .select("-content");
-  res.status(200).json({ status: "success", data: { authorPosts } });
+  const { page, limit } = req.query;
+  const currentPage = page || 1;
+  const imposedLimit = limit || 6;
+  const skip = (currentPage - 1) * imposedLimit;
+  const authorPosts = await BlogPost.find({ author: authorId })
+    .skip(skip)
+    .limit(imposedLimit)
+    .sort([["createdAt", "-1"]])
+    .populate({ path: "author", select: "name photo email" })
+    .select("-content");
+  const totalDocs = await BlogPost.countDocuments({ author: authorId });
+  res
+    .status(200)
+    .json({ status: "success", data: { posts: authorPosts, totalDocs } });
 });
 
 exports.updateAuthor = catchAsync(async (req, res, next) => {
@@ -230,8 +249,18 @@ exports.getMyProfileViewers = catchAsync(async (req, res, next) => {
 
 //Admin specific tasks, highly critical and restricted
 exports.getAllAuthors = catchAsync(async (req, res, next) => {
-  const authors = await Author.find({role:{$ne:'admin'}});
-  res.status(200).json({ status: "success", data: { authors } });
+  const { page, limit } = req.query;
+  const currentPage = page || 1;
+  const imposedLimit = limit || 3;
+  const skip = (currentPage - 1) * imposedLimit;
+  const authors = await Author.find({ role: { $ne: "admin" } })
+    .skip(skip)
+    .limit(imposedLimit)
+    .sort([["createdAt", "-1"]]);
+  const totalDocs = await Author.countDocuments()
+  res
+    .status(200)
+    .json({ status: "success", results: authors.length, data: { authors, totalDocs } });
 });
 
 exports.blockAuthor = catchAsync(async (req, res, next) => {

@@ -24,17 +24,26 @@ const fileFilter = (req, file, cb) => {
 };
 
 const getPosts = async (req) => {
-  const { category, search } = req.query;
+  const { category, search, page, limit } = req.query;
+  const currentPage = page || 1;
+  const imposedLimit = limit || 6;
+  const skip = (currentPage - 1) * imposedLimit;
+  
   const posts = await BlogPost.find({
     $and: [
       { slug: category },
       { title: { $regex: search || "", $options: "i" } },
     ],
   })
+    .skip(skip)
+    .limit(imposedLimit)
+    .sort([['createdAt', '-1']])
     .populate({ path: "author", select: "name photo email" })
-    .select("-content");
+    .select("-content")
 
-  return posts;
+  const totalDocs = await BlogPost.countDocuments({slug:category})
+
+  return {posts, totalDocs};
 };
 
 exports.uploadFile = multer({
@@ -314,21 +323,23 @@ exports.viewPost = catchAsync(async (req, res, next) => {
 
 exports.getPost = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
-  const post = await BlogPost.findById(postId).populate({ path: "author", select: "_id name email photo" });
+  const post = await BlogPost.findById(postId).populate({
+    path: "author",
+    select: "_id name email photo",
+  });
   if (!post) throw new AppError("Post not found", 404);
   res.status(200).json({ status: "success", data: { post } });
 });
 
 exports.getPosts = catchAsync(async (req, res, next) => {
-  const posts = await getPosts(req);
-
+  const {posts, totalDocs} = await getPosts(req);
   res
     .status(200)
-    .json({ status: "success", results: posts.length, data: { posts } });
+    .json({ status: "success", results: posts.length, data: { posts, totalDocs } });
 });
 
 exports.getPostsSuggestions = catchAsync(async (req, res, next) => {
-  const posts = await getPosts(req);
+  const {posts} = await getPosts(req);
 
   const suggestions = posts.map((post) => post.title);
 

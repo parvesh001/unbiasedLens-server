@@ -46,7 +46,6 @@ exports.unfollow = catchAsync(async (req, res, next) => {
 
 exports.view = catchAsync(async (req, res, next) => {
   const { authorId } = req.params;
-
   const viewedAuthor = await Author.findById(authorId);
   if (!viewedAuthor) return next(new AppError("Author not found", 404));
   if (
@@ -59,6 +58,5 @@ exports.view = catchAsync(async (req, res, next) => {
   }else{
     res.status(200).json({message:'already viewed or viewing your own profile'})
   }
-
   
 });
