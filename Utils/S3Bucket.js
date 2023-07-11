@@ -13,13 +13,7 @@ const s3Client = new S3Client({
   region: process.env.S3_REGION,
 });
 
-exports.setFileToS3Bucket = async (
-  bucket,
-  fileName,
-  buffer,
-  contentType,
-  next
-) => {
+exports.setFileToS3Bucket = async (bucket, fileName, buffer, contentType) => {
   const params = {
     Bucket: bucket,
     Key: fileName,
@@ -27,15 +21,11 @@ exports.setFileToS3Bucket = async (
     ContentType: contentType,
   };
   const command = new PutObjectCommand(params);
-  try {
-    const result = await s3Client.send(command);
-    return result;
-  } catch (err) {
-    next(err);
-  }
+  const result = await s3Client.send(command);
+  return result;
 };
 
-exports.deleteFileFromS3Bucket = async (url, next) => {
+exports.deleteFileFromS3Bucket = async (url) => {
   const parts = url.split("amazonaws.com/");
   const key = parts[1];
   const deleteParams = {
@@ -43,9 +33,5 @@ exports.deleteFileFromS3Bucket = async (url, next) => {
     Key: key,
   };
   const deleteCommand = new DeleteObjectCommand(deleteParams);
-  try {
-    await s3Client.send(deleteCommand);
-  } catch (err) {
-    next(err)
-  }
-}
+  await s3Client.send(deleteCommand);
+};

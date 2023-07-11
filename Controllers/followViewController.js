@@ -10,11 +10,9 @@ async function followUnfollow(targetId, currentAuthor, action) {
   }
 
   if (action === "follow") {
-    const alreadyFollowed = followedAuthor.followers.findIndex(
-      (followerId) => followerId.toString() === currentAuthor._id.toString()
-    );
+    const alreadyFollowed = followedAuthor.followers.includes(currentAuthor._id)
 
-    if (alreadyFollowed !== -1) {
+    if (alreadyFollowed) {
       throw new AppError("Author already followed", 400);
     }
     followedAuthor.followers.push(currentAuthor._id);

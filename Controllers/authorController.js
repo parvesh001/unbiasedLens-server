@@ -93,8 +93,7 @@ exports.setProfile = catchAsync(async (req, res, next) => {
     process.env.S3_BUCKET_NAME,
     fileName,
     processedBuffer,
-    mimetype,
-    next
+    mimetype
   );
 
   //Set file to mongodb
@@ -111,7 +110,7 @@ exports.setProfile = catchAsync(async (req, res, next) => {
 
 exports.updateProfile = catchAsync(async (req, res, next) => {
   //First delete exiting one
-  await deleteFileFromS3Bucket(req.author.photo, next);
+  await deleteFileFromS3Bucket(req.author.photo);
 
   //Then, upload new one
   const { fileName, processedBuffer, mimetype } = req.file;
@@ -121,8 +120,7 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
     process.env.S3_BUCKET_NAME,
     fileName,
     processedBuffer,
-    mimetype,
-    next
+    mimetype
   );
 
   //Set file to mongodb
@@ -138,7 +136,7 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteProfile = catchAsync(async (req, res, next) => {
-  await deleteFileFromS3Bucket(req.author.photo, next);
+  await deleteFileFromS3Bucket(req.author.photo);
   const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/authors/default.jpg`;
   await Author.findByIdAndUpdate(req.author._id, { photo: imageUrl });
   res
@@ -226,7 +224,7 @@ exports.getAuthorPosts = catchAsync(async (req, res, next) => {
   const totalDocs = await BlogPost.countDocuments({ author: authorId });
   res
     .status(200)
-    .json({ status: "success", data: { posts: authorPosts, totalDocs } });
+    .json({ status: "success", results:authorPosts.length, data: { posts: authorPosts, totalDocs } });
 });
 
 exports.updateAuthor = catchAsync(async (req, res, next) => {

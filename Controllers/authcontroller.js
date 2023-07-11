@@ -59,7 +59,7 @@ exports.login = catchAsync(async (req, res, next) => {
 
   const author = await Author.findOne({ email }).select("+password");
   if (!author) return next(new AppError("Wrong email or password", 401));
-  if (author.blocked) return next(new AppError("Author is bloked", 403));
+  if (author.blocked) return next(new AppError("You are bloked", 403));
   
   const isComparable = await author.isComparable(password, author.password)
   if (!isComparable) return next(new AppError("Wrong email or password", 401));
@@ -87,7 +87,8 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
   if(author.blocked) return next(new AppError('Author is blocked', 403));
 
   const forgetPassToken = await author.generateAndSaveForgetPassToken();
-  const url = `${process.env.FRONTEND_DOMAIN_NAME}/api/v1/authors/resetPassword/${forgetPassToken}`;
+              //https://domain-name.com/resetPassword/aisdasndksakdsandndsndsn
+  const url = `${process.env.FRONTEND_DOMAIN_NAME}/resetPassword/${forgetPassToken}`;
   const sender = process.env.ADMIN_EMAIL;
   const receiver = author.email;
   const subject = "Request for forgetting password.";

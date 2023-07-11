@@ -96,8 +96,7 @@ exports.createPost = async (req, res, next) => {
       process.env.S3_BUCKET_NAME,
       fileName,
       processedBuffer,
-      mimetype,
-      next
+      mimetype
     );
 
     //first check if category is expected
@@ -124,7 +123,7 @@ exports.createPost = async (req, res, next) => {
       .json({ status: "success", data: { BlogPost: newBlogPost } });
   } catch (err) {
     //undo file upload from s3 bucket
-    await deleteFileFromS3Bucket(imageUrl, next);
+    await deleteFileFromS3Bucket(imageUrl);
     next(err);
   }
 };
@@ -145,7 +144,7 @@ exports.updatePost = async (req, res, next) => {
       throw new AppError("You are not authorized to update this post", 403);
     }
 
-    //Store the url of previous image to delete latter from cloud
+    //Store the url of previous image to delete later from cloud
     let oldImageUrl = post.image;
 
     // Upload the new image to the S3 bucket
@@ -180,7 +179,7 @@ exports.updatePost = async (req, res, next) => {
       .json({ status: "success", data: { blogPost: updatedPost } });
   } catch (err) {
     //Delete post from the cloud if there is error
-    await deleteFileFromS3Bucket(imageUrl, next);
+    await deleteFileFromS3Bucket(imageUrl);
     next(err);
   }
 };
@@ -239,7 +238,7 @@ exports.likePost = catchAsync(async (req, res, next) => {
 
   await blogPost.save();
 
-  res.status(200).json({ status: "success", data: blogPost });
+  res.status(200).json({ status: "success", message: "Post was liked" });
 });
 
 exports.removeLike = catchAsync(async (req, res, next) => {
@@ -253,7 +252,7 @@ exports.removeLike = catchAsync(async (req, res, next) => {
   post.likes.pull(authorId);
   await post.save();
 
-  res.status(200).json({ status: "success", data: post });
+  res.status(200).json({ status: "success", message: "Like was removed" });
 });
 
 exports.dislikePost = catchAsync(async (req, res, next) => {
@@ -282,7 +281,7 @@ exports.dislikePost = catchAsync(async (req, res, next) => {
 
   await blogPost.save();
 
-  res.status(200).json({ status: "success", data: blogPost });
+  res.status(200).json({ status: "success", message: "Post was disliked" });
 });
 
 exports.removeDislike = catchAsync(async (req, res, next) => {
@@ -296,7 +295,7 @@ exports.removeDislike = catchAsync(async (req, res, next) => {
   post.dislikes.pull(authorId);
   await post.save();
 
-  res.status(200).json({ status: "success", data: post });
+  res.status(200).json({ status: "success", message: "Dislike was removed" });
 });
 
 exports.viewPost = catchAsync(async (req, res, next) => {
@@ -311,14 +310,14 @@ exports.viewPost = catchAsync(async (req, res, next) => {
 
   // Check if the author has previously viewed the post
   if (blogPost.views.includes(authorId)) {
-    return res.status(200).json({ status: "success", data: blogPost });
+    return res.status(200).json({ status: "success", message:'Blog Post Already Viewed' });
   }
 
   // Add the author's user ID to the views array
   blogPost.views.push(authorId);
   await blogPost.save();
 
-  res.status(200).json({ status: "success", data: blogPost });
+  res.status(200).json({ status: "success", message: "Blog post was viewed" });
 });
 
 exports.getPost = catchAsync(async (req, res, next) => {
