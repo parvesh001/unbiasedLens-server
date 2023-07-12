@@ -5,7 +5,8 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
-const hpp = require('hpp')
+const hpp = require('hpp');
+const compression = require("compression");
 
 //Local files
 const globalErrorHandler = require("./Controllers/globalErrorController");
@@ -19,6 +20,7 @@ const categoryRouter = require("./Routes/categoryRoutes");
 const blogPostRouter = require("./Routes/postRoutes");
 const commentRouter = require("./Routes/commentRoutes");
 
+
 const app = express();
 const rateLimiter = rateLimit({
   max:200000,
@@ -31,6 +33,7 @@ app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }))
 app.use(cors());
 app.use(rateLimiter);
 app.use(express.json());
+app.use(compression())
 
 //Data Sanitization against NoSQL query injection
 app.use(mongoSanitize())
