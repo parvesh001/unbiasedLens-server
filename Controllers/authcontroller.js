@@ -28,6 +28,7 @@ const mapAuthorDetails = (authorObj)=>{
     followingsCount:authorObj.followings.length,
     active: authorObj.active,
     blocked: authorObj.blocked,
+    verified:authorObj.verified,
     createdAt: authorObj.createdAt,
   }
 }

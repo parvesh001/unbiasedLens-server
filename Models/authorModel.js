@@ -60,6 +60,10 @@ const authorSchema = new mongoose.Schema(
     passwordChangedAt:Date,
     forgetPassToken:String,
     forgetPassExpiresIn:Date,
+    verified:{
+      type:Boolean,
+      default:false
+    }
   },
   {
     timestamps: true,
