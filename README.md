@@ -17,7 +17,7 @@ Unbiased Lens Web Service is a versatile platform that empowers bloggers to crea
 
 ## Features
 - Authentication and Authorization: Securely register, log in, and authenticate users with JSON Web Tokens. Protect your blog content and ensure authorized access to specific functionalities.
-
+- Author Verification: Authors have to verify their email in order to be recognized. This feature ensures reliability and security.
 - Input Validation: Robust validation is applied using Mongoose built-in validation and custom middleware.
 
 - Error Handling: Comprehensive error handling mechanisms to provide informative and user-friendly error messages, enhancing the overall user experience.
