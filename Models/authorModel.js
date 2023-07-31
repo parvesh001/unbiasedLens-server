@@ -63,7 +63,9 @@ const authorSchema = new mongoose.Schema(
     verified:{
       type:Boolean,
       default:false
-    }
+    },
+    verificationToken:String,
+    verificationTokenExpiresIn:Date
   },
   {
     timestamps: true,
@@ -75,14 +77,19 @@ authorSchema.methods.isComparable = async function(inputPass, hasedPass){
     return await bcrypt.compare(inputPass,hasedPass)
 }
 
-authorSchema.methods.generateAndSaveForgetPassToken = async function(){
-  const forgetPassToken = crypto.randomBytes(32).toString('hex');
-  const forgetPassTokenHashed = crypto.createHash('sha256').update(forgetPassToken).digest('hex')
-
-  this.forgetPassToken = forgetPassTokenHashed
-  this.forgetPassExpiresIn = Date.now() + 10 * 60 * 1000
+authorSchema.methods.generateAndSaveToken = async function(action){
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHashed = crypto.createHash('sha256').update(token).digest('hex')
+  
+  if(action === 'verification'){
+    this.verificationToken = tokenHashed;
+    this.verificationTokenExpiresIn = Date.now() + 10 * 60 * 1000
+  }else{
+    this.forgetPassToken = tokenHashed
+    this.forgetPassExpiresIn = Date.now() + 10 * 60 * 1000
+  }
   await this.save({validateBeforeSave:false})
-  return forgetPassToken
+  return token;
 }
 
 authorSchema.methods.passwordChangedAfter = function(tokenIssueTime){

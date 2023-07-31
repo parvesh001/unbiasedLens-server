@@ -16,22 +16,22 @@ function signToken(userId) {
   });
 }
 
-const mapAuthorDetails = (authorObj)=>{
+const mapAuthorDetails = (authorObj) => {
   return {
-    _id:authorObj._id,
+    _id: authorObj._id,
     name: authorObj.name,
     email: authorObj.email,
     photo: authorObj.photo,
     role: authorObj.role,
     postsCount: authorObj.posts.length,
-    followersCount:authorObj.followers.length,
-    followingsCount:authorObj.followings.length,
+    followersCount: authorObj.followers.length,
+    followingsCount: authorObj.followings.length,
     active: authorObj.active,
     blocked: authorObj.blocked,
-    verified:authorObj.verified,
+    verified: authorObj.verified,
     createdAt: authorObj.createdAt,
-  }
-}
+  };
+};
 
 //Controllers
 exports.register = catchAsync(async (req, res, next) => {
@@ -42,7 +42,7 @@ exports.register = catchAsync(async (req, res, next) => {
   // Exclude the 'password' field from the response
   newAuthor.password = undefined;
   const token = signToken(newAuthor._id);
-  const mappedAuthor = mapAuthorDetails(newAuthor)
+  const mappedAuthor = mapAuthorDetails(newAuthor);
   res.status(201).json({ status: "success", token, author: mappedAuthor });
 });
 
@@ -61,34 +61,84 @@ exports.login = catchAsync(async (req, res, next) => {
   const author = await Author.findOne({ email }).select("+password");
   if (!author) return next(new AppError("Wrong email or password", 401));
   if (author.blocked) return next(new AppError("You are bloked", 403));
-  
-  const isComparable = await author.isComparable(password, author.password)
+
+  const isComparable = await author.isComparable(password, author.password);
   if (!isComparable) return next(new AppError("Wrong email or password", 401));
 
-  if(!author.active){
-     author.active = true;
-     await author.save({validateBeforeSave:false})
+  if (!author.active) {
+    author.active = true;
+    await author.save({ validateBeforeSave: false });
   }
   const token = signToken(author._id);
-  const mappedAuthor = mapAuthorDetails(author)
+  const mappedAuthor = mapAuthorDetails(author);
   res.status(200).json({
     status: "success",
     token,
     data: {
-      author:mappedAuthor,
+      author: mappedAuthor,
     },
   });
+});
+
+exports.requestVerification = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) return next(new AppError("Please provide email", 400));
+  let [author] = await Author.find({ email });
+  if (!author) return next(new AppError("No author found with the email", 404));
+  if (author.blocked) return next(new AppError("Author is blocked", 403));
+ 
+  const verificationToken = await author.generateAndSaveToken("verification");
+  //https://domain-name.com/author-verification/aisdasndksakdsandndsndsn
+  const url = `${process.env.FRONTEND_DOMAIN_NAME}/author-verification/${verificationToken}`;
+  const sender = process.env.ADMIN_EMAIL;
+  const receiver = author.email;
+  const subject = "Please Verify Email";
+  const message = "Click on the link to verify your email";
+  const htmlContent = `<div><p>${message}</p><a href=${url}>Click here</a></div>`;
+
+  try {
+    await sendMail({ sender, receiver, subject, htmlContent });
+    res.status(200).json({
+      status: "success",
+      message: "Email sent successfully",
+    });
+  } catch (err) {
+    author.verificationToken = undefined;
+    author.verificationTokenExpiresIn = undefined;
+    await author.save({ validateBeforeSave: false });
+    return next(err);
+  }
+});
+
+exports.verify = catchAsync(async (req, res, next) => {
+  const { verificationToken } = req.params;
+  const verificationTokenHashed = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+  const [author] = await Author.find({
+    verificationToken: verificationTokenHashed,
+    verificationTokenExpiresIn: { $gt: Date.now() },
+  });
+  if (!author) return next(new AppError("Verification link expired", 401));
+
+  author.verified = true;
+  await author.save({ validateBeforeSave: false });
+  res
+    .status(200)
+    .json({ status: "success", message: "Author verified successfully" });
 });
 
 exports.forgetPassword = catchAsync(async (req, res, next) => {
   const { email } = req.body;
   if (!email) return next(new AppError("Please provide email!", 400));
   const author = await Author.findOne({ email });
-  if (!author || !author.active) return next(new AppError("Author do not exist", 404));
-  if(author.blocked) return next(new AppError('Author is blocked', 403));
+  if (!author || !author.active)
+    return next(new AppError("Author do not exist", 404));
+  if (author.blocked) return next(new AppError("Author is blocked", 403));
 
-  const forgetPassToken = await author.generateAndSaveForgetPassToken();
-              //https://domain-name.com/resetPassword/aisdasndksakdsandndsndsn
+  const forgetPassToken = await author.generateAndSaveToken("forget-password");
+  //https://domain-name.com/resetPassword/aisdasndksakdsandndsndsn
   const url = `${process.env.FRONTEND_DOMAIN_NAME}/resetPassword/${forgetPassToken}`;
   const sender = process.env.ADMIN_EMAIL;
   const receiver = author.email;
@@ -136,7 +186,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   await author.save();
 
   const token = signToken(author._id);
-  const mappedAuthor = mapAuthorDetails(author)
+  const mappedAuthor = mapAuthorDetails(author);
   res.status(200).json({
     status: "success",
     token,
@@ -160,7 +210,8 @@ exports.protect = catchAsync(async (req, res, next) => {
   const author = await Author.findById(userId);
   if (!author) return next(new AppError("Authot no longer exist", 401));
   //check if author is blocked
-  if(author.blocked) return next(new AppError('Access denied, you are blocked',403 ))
+  if (author.blocked)
+    return next(new AppError("Access denied, you are blocked", 403));
   //check if author has changed password after issuing token
   if (author.passwordChangedAfter(iat))
     return next(new AppError("Login again, password is changed", 401));

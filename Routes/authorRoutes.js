@@ -7,6 +7,8 @@ const {
   resetPassword,
   protect,
   restrict,
+  requestVerification,
+  verify,
 } = require("../Controllers/authcontroller");
 const {
   getAuthor,
@@ -28,6 +30,8 @@ const {
 
 router.post("/register", register);
 router.post("/login", login);
+router.post('/request-verification', requestVerification);
+router.patch('/verify/:verificationToken', verify)
 router.post("/forgetPassword", forgetPassword);
 router.patch("/resetPassword/:resetPassToken", resetPassword);
 router.get("/author/:authorId", getAuthor);
